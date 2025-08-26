@@ -1,7 +1,7 @@
 import 'package:jezail_ui/models/files/file_info.dart';
 import 'package:flutter/foundation.dart';
-import '../../core/enums/file_enums.dart';
-import 'file_operation_result.dart';
+import 'package:jezail_ui/core/enums/file_enums.dart';
+import 'package:jezail_ui/models/files/file_operation_result.dart';
 
 final class FileExplorerViewState {
   const FileExplorerViewState({

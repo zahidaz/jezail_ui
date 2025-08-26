@@ -2,9 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'dart:async';
 
-import '../../../core/enums/device_enums.dart';
-import '../../../repositories/device_repository.dart';
-import '../../widgets/common/snackbar_extensions.dart';
+import 'package:jezail_ui/core/enums/device_enums.dart';
+import 'package:jezail_ui/repositories/device_repository.dart';
+import 'package:jezail_ui/presentation/widgets/common/snackbar_extensions.dart';
 
 class LogsTab extends StatefulWidget {
   const LogsTab({super.key, required this.repository});

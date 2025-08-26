@@ -3,17 +3,17 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:logger/logger.dart';
 import 'package:go_router/go_router.dart';
-import 'models/tab_info.dart';
-import 'services/api_service.dart';
-import 'services/device_service.dart';
-import 'services/file_service.dart';
-import 'repositories/files_repository.dart';
-import 'presentation/tabs/files/files_tab.dart';
-import 'services/package_service.dart';
-import 'repositories/package_repository.dart';
-import 'presentation/tabs/packages/packages_tab.dart';
-import 'utils/log.dart';
-import 'presentation/widgets/header.dart';
+import 'package:jezail_ui/models/tab_info.dart';
+import 'package:jezail_ui/services/api_service.dart';
+import 'package:jezail_ui/services/device_service.dart';
+import 'package:jezail_ui/services/file_service.dart';
+import 'package:jezail_ui/repositories/files_repository.dart';
+import 'package:jezail_ui/presentation/tabs/files/files_tab.dart';
+import 'package:jezail_ui/services/package_service.dart';
+import 'package:jezail_ui/repositories/package_repository.dart';
+import 'package:jezail_ui/presentation/tabs/packages/packages_tab.dart';
+import 'package:jezail_ui/utils/log.dart';
+import 'package:jezail_ui/presentation/widgets/header.dart';
 
 const appName = "JEZAIL";
 

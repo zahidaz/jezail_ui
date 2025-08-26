@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../../../core/enums/snackbar_type.dart';
+import 'package:jezail_ui/core/enums/snackbar_type.dart';
 
 class MySnackBar {
   static void show(

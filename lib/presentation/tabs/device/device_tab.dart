@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 
-import '../../../repositories/device_repository.dart';
-import 'overview_tab.dart';
-import 'processes_tab.dart';
-import 'logs_tab.dart';
-import 'system_tab.dart';
-import 'controls_tab.dart';
-import 'storage_tab.dart';
+import 'package:jezail_ui/repositories/device_repository.dart';
+import 'package:jezail_ui/presentation/tabs/device/overview_tab.dart';
+import 'package:jezail_ui/presentation/tabs/device/processes_tab.dart';
+import 'package:jezail_ui/presentation/tabs/device/logs_tab.dart';
+import 'package:jezail_ui/presentation/tabs/device/system_tab.dart';
+import 'package:jezail_ui/presentation/tabs/device/controls_tab.dart';
+import 'package:jezail_ui/presentation/tabs/device/storage_tab.dart';
 
 class DeviceTab extends StatefulWidget {
   const DeviceTab({super.key, required this.repository});

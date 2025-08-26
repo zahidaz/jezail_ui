@@ -1,11 +1,11 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
-import '../../main.dart' show appName;
-import '../../services/device_service.dart';
-import 'common/snackbar_extensions.dart';
-import 'common/dialog_utils.dart';
-import '../../utils/log.dart';
-import '../../core/enums/battery_level.dart';
+import 'package:jezail_ui/main.dart' show appName;
+import 'package:jezail_ui/services/device_service.dart';
+import 'package:jezail_ui/presentation/widgets/common/snackbar_extensions.dart';
+import 'package:jezail_ui/presentation/widgets/common/dialog_utils.dart';
+import 'package:jezail_ui/utils/log.dart';
+import 'package:jezail_ui/core/enums/battery_level.dart';
 
 extension BatteryLevelFromPercent on BatteryLevel {
   static BatteryLevel fromPercent(int percent) => switch (percent) {

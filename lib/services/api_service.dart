@@ -2,7 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:typed_data';
 import 'package:http/http.dart' as http;
-import '../utils/log.dart';
+import 'package:jezail_ui/utils/log.dart';
 
 class ApiService {
   final String baseUrl;

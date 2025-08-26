@@ -1,9 +1,9 @@
 import 'dart:typed_data';
 import 'package:jezail_ui/models/files/file_info.dart';
 
-import '../services/file_service.dart';
-import '../services/api_service.dart';
-import '../core/exceptions/file_exception.dart';
+import 'package:jezail_ui/services/file_service.dart';
+import 'package:jezail_ui/services/api_service.dart';
+import 'package:jezail_ui/core/exceptions/file_exception.dart';
 
 class FileRepository {
     final FilesService _fileService;

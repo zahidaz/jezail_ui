@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../enums/snackbar_type.dart';
+import 'package:jezail_ui/core/enums/snackbar_type.dart';
 
 extension BuildContextExtensions on BuildContext {
   void showSnackBar(String message) {

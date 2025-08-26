@@ -2,7 +2,7 @@ import 'dart:convert';
 import 'package:jezail_ui/models/packages/package_actions.dart';
 import 'package:jezail_ui/models/packages/package_info.dart';
 import 'package:flutter/material.dart';
-import '../../../core/enums/package_enums.dart';
+import 'package:jezail_ui/core/enums/package_enums.dart';
 
 class PackageListPage extends StatelessWidget {
   const PackageListPage({

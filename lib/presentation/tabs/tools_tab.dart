@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import '../../repositories/tool_repository.dart';
-import '../../core/extensions/build_context_extensions.dart';
+import 'package:jezail_ui/repositories/tool_repository.dart';
+import 'package:jezail_ui/core/extensions/build_context_extensions.dart';
 
 class ToolsTab extends StatefulWidget {
   final ToolRepository repository;

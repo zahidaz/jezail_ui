@@ -1,4 +1,4 @@
-import 'api_service.dart';
+import 'package:jezail_ui/services/api_service.dart';
 
 class FridaService {
   final ApiService _api;

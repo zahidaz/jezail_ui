@@ -1,4 +1,4 @@
-import '../../models/files/file_info.dart';
+import 'package:jezail_ui/models/files/file_info.dart';
 
 extension FileInfoDisplay on FileInfo {
   String get formattedSize {

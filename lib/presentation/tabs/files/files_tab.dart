@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:jezail_ui/repositories/files_repository.dart';
-import 'file_explorer.dart';
+import 'package:jezail_ui/presentation/tabs/files/file_explorer.dart';
 
 class FilesTab extends StatefulWidget {
   const FilesTab({super.key, required this.repository});

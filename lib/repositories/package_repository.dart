@@ -1,7 +1,7 @@
 import 'dart:typed_data';
 import 'package:jezail_ui/models/packages/package_info.dart';
 
-import '../services/package_service.dart';
+import 'package:jezail_ui/services/package_service.dart';
 
 class PackageRepository {
   final PackageService _packageService;

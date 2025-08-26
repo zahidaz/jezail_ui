@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 
-import '../../../repositories/device_repository.dart';
-import '../../widgets/common/snackbar_extensions.dart';
-import '../../widgets/device/info_card.dart';
+import 'package:jezail_ui/repositories/device_repository.dart';
+import 'package:jezail_ui/presentation/widgets/common/snackbar_extensions.dart';
+import 'package:jezail_ui/presentation/widgets/device/info_card.dart';
 
 class StorageTab extends StatefulWidget {
   const StorageTab({super.key, required this.repository});

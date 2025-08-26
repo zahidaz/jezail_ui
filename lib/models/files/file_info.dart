@@ -1,4 +1,4 @@
-import '../../core/enums/file_enums.dart';
+import 'package:jezail_ui/core/enums/file_enums.dart';
 
 class FileInfo {
   final String name;

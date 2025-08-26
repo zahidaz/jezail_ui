@@ -2,9 +2,9 @@ import 'package:jezail_ui/models/files/file_info.dart';
 import 'package:jezail_ui/presentation/tabs/files/file_utils.dart';
 import 'package:flutter/material.dart';
 import 'package:jezail_ui/repositories/files_repository.dart';
-import '../../../../core/enums/file_enums.dart';
-import '../dialogs/properties/file_properties_dialog.dart';
-import 'context_menu.dart';
+import 'package:jezail_ui/core/enums/file_enums.dart';
+import 'package:jezail_ui/presentation/tabs/files/dialogs/properties/file_properties_dialog.dart';
+import 'package:jezail_ui/presentation/tabs/files/widgets/context_menu.dart';
 
 final class FileView extends StatelessWidget {
   const FileView({

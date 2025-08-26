@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
-import '../../../repositories/device_repository.dart';
-import '../../widgets/common/snackbar_extensions.dart';
+import 'package:jezail_ui/repositories/device_repository.dart';
+import 'package:jezail_ui/presentation/widgets/common/snackbar_extensions.dart';
 
 class ControlsTab extends StatefulWidget {
   const ControlsTab({super.key, required this.repository});

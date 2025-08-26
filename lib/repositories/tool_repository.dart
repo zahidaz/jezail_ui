@@ -1,5 +1,5 @@
-import '../services/adb_service.dart';
-import '../services/frida_service.dart';
+import 'package:jezail_ui/services/adb_service.dart';
+import 'package:jezail_ui/services/frida_service.dart';
 
 class ToolRepository {
   final AdbService _adbService;

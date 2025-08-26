@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import '../../../models/packages/package_info.dart';
-import '../../../models/packages/details.dart';
-import '../../../repositories/package_repository.dart';
-import '../../../core/enums/package_enums.dart';
+import 'package:jezail_ui/models/packages/package_info.dart';
+import 'package:jezail_ui/models/packages/details.dart';
+import 'package:jezail_ui/repositories/package_repository.dart';
+import 'package:jezail_ui/core/enums/package_enums.dart';
 
 class PackageDetailsPage extends StatefulWidget {
   final PackageInfo? package;

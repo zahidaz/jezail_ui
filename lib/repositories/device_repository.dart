@@ -1,6 +1,6 @@
-import '../services/device_service.dart';
-import '../models/device.dart';
-import '../core/enums/device_enums.dart';
+import 'package:jezail_ui/services/device_service.dart';
+import 'package:jezail_ui/models/device.dart';
+import 'package:jezail_ui/core/enums/device_enums.dart';
 
 class DeviceRepository {
   const DeviceRepository(this._deviceService);

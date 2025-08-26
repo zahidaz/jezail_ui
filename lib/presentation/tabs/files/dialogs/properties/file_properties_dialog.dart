@@ -2,7 +2,7 @@ import 'package:jezail_ui/models/files/file_info.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:jezail_ui/repositories/files_repository.dart';
-import 'file_operations_panel.dart';
+import 'package:jezail_ui/presentation/tabs/files/dialogs/properties/file_operations_panel.dart';
 
 class FilePropertiesDialog extends StatefulWidget {
   const FilePropertiesDialog({

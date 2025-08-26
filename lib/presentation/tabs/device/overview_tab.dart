@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import '../../widgets/device/info_card.dart';
-import '../../../repositories/device_repository.dart';
+import 'package:jezail_ui/presentation/widgets/device/info_card.dart';
+import 'package:jezail_ui/repositories/device_repository.dart';
 
 class OverviewTab extends StatefulWidget {
   const OverviewTab({super.key, required this.repository});

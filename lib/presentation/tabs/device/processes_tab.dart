@@ -2,10 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'dart:async';
 
-import '../../../models/device.dart';
-import '../../../repositories/device_repository.dart';
-import '../../widgets/common/snackbar_extensions.dart';
-import '../../widgets/common/dialog_utils.dart';
+import 'package:jezail_ui/models/device.dart';
+import 'package:jezail_ui/repositories/device_repository.dart';
+import 'package:jezail_ui/presentation/widgets/common/snackbar_extensions.dart';
+import 'package:jezail_ui/presentation/widgets/common/dialog_utils.dart';
 
 class ProcessesTab extends StatefulWidget {
   const ProcessesTab({super.key, required this.repository});

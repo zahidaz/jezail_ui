@@ -1,5 +1,5 @@
 import 'dart:typed_data';
-import 'api_service.dart';
+import 'package:jezail_ui/services/api_service.dart';
 
 class PackageService {
   final ApiService _api;

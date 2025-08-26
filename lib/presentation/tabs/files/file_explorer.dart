@@ -1,18 +1,18 @@
 import 'package:jezail_ui/models/files/file_info.dart';
 import 'package:flutter/material.dart';
 import 'package:jezail_ui/repositories/files_repository.dart';
-import 'controllers/file_explorer_controller.dart';
-import '../../../models/files/file_explorer_view_state.dart';
-import '../../../models/files/file_operation_result.dart';
-import 'widgets/file_toolbar.dart';
-import 'widgets/file_view.dart';
-import 'widgets/path_navigator.dart';
-import 'widgets/quick_access.dart';
-import 'dialogs/file_create_dialog.dart';
-import 'dialogs/file_upload_dialog.dart';
-import 'dialogs/file_preview_dialog.dart';
-import 'dialogs/file_edit_dialog.dart';
-import 'dialogs/file_rename_dialog.dart';
+import 'package:jezail_ui/presentation/tabs/files/controllers/file_explorer_controller.dart';
+import 'package:jezail_ui/models/files/file_explorer_view_state.dart';
+import 'package:jezail_ui/models/files/file_operation_result.dart';
+import 'package:jezail_ui/presentation/tabs/files/widgets/file_toolbar.dart';
+import 'package:jezail_ui/presentation/tabs/files/widgets/file_view.dart';
+import 'package:jezail_ui/presentation/tabs/files/widgets/path_navigator.dart';
+import 'package:jezail_ui/presentation/tabs/files/widgets/quick_access.dart';
+import 'package:jezail_ui/presentation/tabs/files/dialogs/file_create_dialog.dart';
+import 'package:jezail_ui/presentation/tabs/files/dialogs/file_upload_dialog.dart';
+import 'package:jezail_ui/presentation/tabs/files/dialogs/file_preview_dialog.dart';
+import 'package:jezail_ui/presentation/tabs/files/dialogs/file_edit_dialog.dart';
+import 'package:jezail_ui/presentation/tabs/files/dialogs/file_rename_dialog.dart';
 
 final class FileExplorer extends StatefulWidget {
   const FileExplorer({
