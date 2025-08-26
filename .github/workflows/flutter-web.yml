@@ -1,0 +1,61 @@
+# This workflow builds Flutter web assets and creates releases
+name: Build Web Assets
+
+on:
+  push:
+    branches: [ "main" ]
+    tags: [ "v*" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      # Use Flutter action instead of Dart for web builds
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+          
+      - name: Install dependencies
+        run: flutter pub get
+        
+      # Keep your existing analysis
+      - name: Analyze project source
+        run: flutter analyze
+        
+      # Add test step for Flutter (if you have tests)
+      - name: Run tests
+        run: flutter test
+        
+      # Build web assets
+      - name: Build Flutter Web
+        run: flutter build web --release --web-renderer html
+        
+      # Create web assets archive
+      - name: Archive web assets
+        run: |
+          cd build/web
+          zip -r ../../web-assets.zip .
+          cd ../..
+          
+      # Upload build artifacts for pull requests
+      - name: Upload web assets
+        if: github.event_name == 'pull_request'
+        uses: actions/upload-artifact@v4
+        with:
+          name: web-assets
+          path: web-assets.zip
+          retention-days: 7
+          
+      # Create release for tags
+      - name: Create Release
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v1
+        with:
+          files: web-assets.zip
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
