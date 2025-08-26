@@ -1,7 +1,7 @@
 import 'dart:typed_data';
 import 'package:http/http.dart' as http;
 import 'package:jezail_ui/services/api_service.dart';
-import 'package:jezail_ui/utils/log.dart';
+import 'package:jezail_ui/core/log.dart';
 
 class FilesService {
 

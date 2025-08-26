@@ -2,22 +2,11 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:jezail_ui/main.dart' show appName;
 import 'package:jezail_ui/services/device_service.dart';
-import 'package:jezail_ui/presentation/widgets/common/snackbar_extensions.dart';
-import 'package:jezail_ui/presentation/widgets/common/dialog_utils.dart';
-import 'package:jezail_ui/utils/log.dart';
+import 'package:jezail_ui/core/extensions/snackbar_extensions.dart';
+import 'package:jezail_ui/presentation/utils/dialog_utils.dart';
+import 'package:jezail_ui/core/log.dart';
 import 'package:jezail_ui/core/enums/battery_level.dart';
-
-extension BatteryLevelFromPercent on BatteryLevel {
-  static BatteryLevel fromPercent(int percent) => switch (percent) {
-    <= 10 => BatteryLevel.critical,
-    <= 25 => BatteryLevel.low,
-    <= 50 => BatteryLevel.medium,
-    <= 75 => BatteryLevel.high,
-    _ => BatteryLevel.full,
-  };
-}
-
-typedef DeviceInfo = ({String name, int battery, bool charging});
+import 'package:jezail_ui/models/device/device_info.dart';
 
 class Header extends StatefulWidget {
   const Header({super.key, required this.deviceService, this.onToggleSidebar});
@@ -174,7 +163,7 @@ class _HeaderState extends State<Header> with TickerProviderStateMixin {
   );
 
   Widget _batteryWidget(int level, bool charging) {
-    final batteryLevel = BatteryLevelFromPercent.fromPercent(level);
+    final batteryLevel = BatteryLevelExtension.fromPercent(level);
     
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),

@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:jezail_ui/repositories/tool_repository.dart';
+import 'package:jezail_ui/models/tools/adb_status.dart';
+import 'package:jezail_ui/models/tools/frida_status.dart';
+import 'package:jezail_ui/models/tools/frida_info.dart';
 import 'package:jezail_ui/core/extensions/build_context_extensions.dart';
 
 class ToolsTab extends StatefulWidget {

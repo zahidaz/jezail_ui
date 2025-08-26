@@ -12,7 +12,7 @@ import 'package:jezail_ui/presentation/tabs/files/files_tab.dart';
 import 'package:jezail_ui/services/package_service.dart';
 import 'package:jezail_ui/repositories/package_repository.dart';
 import 'package:jezail_ui/presentation/tabs/packages/packages_tab.dart';
-import 'package:jezail_ui/utils/log.dart';
+import 'package:jezail_ui/core/log.dart';
 import 'package:jezail_ui/presentation/widgets/header.dart';
 
 const appName = "JEZAIL";

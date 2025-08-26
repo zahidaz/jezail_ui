@@ -2,7 +2,8 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:typed_data';
 import 'package:http/http.dart' as http;
-import 'package:jezail_ui/utils/log.dart';
+import 'package:jezail_ui/core/log.dart';
+import 'package:jezail_ui/core/exceptions/api_exception.dart';
 
 class ApiService {
   final String baseUrl;
@@ -42,8 +43,8 @@ class ApiService {
     }
     
     throw ApiException(
-      response.statusCode,
       'GET $endpoint failed (${response.statusCode} ${response.reasonPhrase ?? ''})',
+      response.statusCode,
     );
   }
 
@@ -163,8 +164,8 @@ class ApiService {
     }
     
     throw ApiException(
-      response.statusCode,
       'GET $endpoint failed (${response.statusCode} ${response.reasonPhrase ?? ''})',
+      response.statusCode,
     );
   }
 
@@ -179,8 +180,8 @@ class ApiService {
       }
     } else {
       throw ApiException(
-        response.statusCode, 
         'HTTP ${response.statusCode}: ${response.reasonPhrase ?? ''}',
+        response.statusCode,
       );
     }
   }
@@ -198,16 +199,7 @@ class ApiService {
 
     final errorMsg = '$method $endpoint failed (${res.statusCode} ${res.reasonPhrase ?? ''})';
     Log.warning(errorMsg);
-    throw ApiException(res.statusCode, errorMsg);
+    throw ApiException(errorMsg, res.statusCode);
   }
 }
 
-class ApiException implements Exception {
-  final int statusCode;
-  final String errorMessage;
-
-  const ApiException(this.statusCode, this.errorMessage);
-
-  @override
-  String toString() => 'ApiException: HTTP $statusCode - $errorMessage';
-}

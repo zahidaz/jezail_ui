@@ -7,7 +7,7 @@ import 'package:jezail_ui/repositories/files_repository.dart';
 import 'package:jezail_ui/models/files/file_explorer_view_state.dart';
 import 'package:jezail_ui/models/files/file_operation_result.dart';
 import 'package:jezail_ui/core/enums/file_enums.dart';
-import 'package:jezail_ui/utils/log.dart';
+import 'package:jezail_ui/core/log.dart';
 
 final class FileExplorerController extends ValueNotifier<FileExplorerViewState> {
   FileExplorerController(this._repository) : super(const FileExplorerViewState()) {

@@ -1,7 +1,7 @@
 import 'package:jezail_ui/models/files/file_info.dart';
 import 'package:flutter/material.dart';
 import 'package:jezail_ui/repositories/files_repository.dart';
-import 'package:jezail_ui/presentation/tabs/files/controllers/file_explorer_controller.dart';
+import 'package:jezail_ui/presentation/controllers/file_explorer_controller.dart';
 import 'package:jezail_ui/models/files/file_explorer_view_state.dart';
 import 'package:jezail_ui/models/files/file_operation_result.dart';
 import 'package:jezail_ui/presentation/tabs/files/widgets/file_toolbar.dart';

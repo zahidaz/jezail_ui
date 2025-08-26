@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:jezail_ui/presentation/widgets/device/info_card.dart';
+import 'package:jezail_ui/presentation/tabs/device/widgets/info_card.dart';
 import 'package:jezail_ui/repositories/device_repository.dart';
 
 class OverviewTab extends StatefulWidget {

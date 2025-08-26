@@ -1,7 +1,7 @@
 import 'dart:typed_data';
 import 'dart:js_interop';
 import 'package:jezail_ui/services/api_service.dart';
-import 'package:jezail_ui/utils/log.dart';
+import 'package:jezail_ui/core/log.dart';
 
 import 'package:web/web.dart' as web;
 

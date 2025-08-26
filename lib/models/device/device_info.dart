@@ -1,0 +1,1 @@
+typedef DeviceInfo = ({String name, int battery, bool charging});

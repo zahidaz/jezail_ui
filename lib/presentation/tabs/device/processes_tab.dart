@@ -2,10 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'dart:async';
 
-import 'package:jezail_ui/models/device.dart';
+import 'package:jezail_ui/models/device/process_info.dart';
 import 'package:jezail_ui/repositories/device_repository.dart';
-import 'package:jezail_ui/presentation/widgets/common/snackbar_extensions.dart';
-import 'package:jezail_ui/presentation/widgets/common/dialog_utils.dart';
+import 'package:jezail_ui/core/extensions/snackbar_extensions.dart';
+import 'package:jezail_ui/core/enums/process_enums.dart';
+import 'package:jezail_ui/presentation/utils/dialog_utils.dart';
 
 class ProcessesTab extends StatefulWidget {
   const ProcessesTab({super.key, required this.repository});
@@ -241,21 +242,3 @@ class _ProcessesTabState extends State<ProcessesTab> with SingleTickerProviderSt
   }
 }
 
-enum ProcessSort {
-  name(Icons.text_fields),
-  pid(Icons.tag),
-  user(Icons.person),
-  memory(Icons.memory),
-  state(Icons.play_circle);
-
-  const ProcessSort(this.icon);
-  final IconData icon;
-
-  String get label => switch (this) {
-    ProcessSort.name => 'Name',
-    ProcessSort.pid => 'PID', 
-    ProcessSort.user => 'User',
-    ProcessSort.memory => 'Memory',
-    ProcessSort.state => 'State',
-  };
-}

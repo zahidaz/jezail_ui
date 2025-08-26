@@ -1,5 +1,9 @@
 import 'package:jezail_ui/services/adb_service.dart';
 import 'package:jezail_ui/services/frida_service.dart';
+import 'package:jezail_ui/models/tools/adb_status.dart';
+import 'package:jezail_ui/models/tools/frida_status.dart';
+import 'package:jezail_ui/models/tools/frida_info.dart';
+import 'package:jezail_ui/core/exceptions/tool_exception.dart';
 
 class ToolRepository {
   final AdbService _adbService;
@@ -106,46 +110,3 @@ class ToolRepository {
   }
 }
 
-class AdbStatus {
-  final bool isRunning;
-  final String port;
-
-  const AdbStatus({
-    required this.isRunning,
-    required this.port,
-  });
-}
-
-class FridaStatus {
-  final bool isRunning;
-  final String port;
-  final String version;
-
-  const FridaStatus({
-    required this.isRunning,
-    required this.port,
-    required this.version,
-  });
-}
-
-class FridaInfo {
-  final String currentVersion;
-  final String latestVersion;
-  final bool needsUpdate;
-  final String installPath;
-
-  const FridaInfo({
-    required this.currentVersion,
-    required this.latestVersion,
-    required this.needsUpdate,
-    required this.installPath,
-  });
-}
-
-class ToolOperationException implements Exception {
-  final String message;
-  const ToolOperationException(this.message);
-  
-  @override
-  String toString() => 'ToolOperationException: $message';
-}

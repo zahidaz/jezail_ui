@@ -2,7 +2,7 @@ import 'dart:typed_data';
 import 'package:jezail_ui/models/files/file_info.dart';
 
 import 'package:jezail_ui/services/file_service.dart';
-import 'package:jezail_ui/services/api_service.dart';
+import 'package:jezail_ui/core/exceptions/api_exception.dart';
 import 'package:jezail_ui/core/exceptions/file_exception.dart';
 
 class FileRepository {
@@ -18,7 +18,7 @@ class FileRepository {
       if (e.statusCode == 409) {
         throw FileOperationException('Access denied: Root permissions required for $path');
       }
-      throw FileOperationException('Failed to get file info for $path: ${e.errorMessage}');
+      throw FileOperationException('Failed to get file info for $path: ${e.message}');
     } catch (e) {
       throw FileOperationException('Failed to get file info for $path: $e');
     }
@@ -33,7 +33,7 @@ class FileRepository {
       if (e.statusCode == 409) {
         throw FileOperationException('Access denied: Root permissions required for ${path ?? "/"}');
       }
-      throw FileOperationException('Failed to list directory ${path ?? "/"}: ${e.errorMessage}');
+      throw FileOperationException('Failed to list directory ${path ?? "/"}: ${e.message}');
     } catch (e) {
       throw FileOperationException('Failed to list directory ${path ?? "/"}: $e');
     }
@@ -48,7 +48,7 @@ class FileRepository {
       if (e.statusCode == 409) {
         throw FileOperationException('Access denied: Root permissions required to read $path');
       }
-      throw FileOperationException('Failed to read file $path: ${e.errorMessage}');
+      throw FileOperationException('Failed to read file $path: ${e.message}');
     } catch (e) {
       throw FileOperationException('Failed to read file $path: $e');
     }

@@ -6,8 +6,8 @@ import 'package:go_router/go_router.dart';
 import 'package:jezail_ui/models/packages/package_info.dart';
 import 'package:jezail_ui/repositories/package_repository.dart';
 import 'package:jezail_ui/core/enums/package_enums.dart';
-import 'package:jezail_ui/presentation/widgets/common/snackbar_extensions.dart';
-import 'package:jezail_ui/presentation/widgets/common/dialog_utils.dart';
+import 'package:jezail_ui/core/extensions/snackbar_extensions.dart';
+import 'package:jezail_ui/presentation/utils/dialog_utils.dart';
 import 'package:jezail_ui/presentation/tabs/packages/package_list_page.dart';
 import 'package:jezail_ui/presentation/tabs/packages/package_details_page.dart';
 

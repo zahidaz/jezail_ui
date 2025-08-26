@@ -31,4 +31,12 @@ extension BatteryLevelExtension on BatteryLevel {
     BatteryLevel.low => Colors.orange,
     _ => Colors.white,
   };
+  
+  static BatteryLevel fromPercent(int percent) => switch (percent) {
+    <= 10 => BatteryLevel.critical,
+    <= 25 => BatteryLevel.low,
+    <= 50 => BatteryLevel.medium,
+    <= 75 => BatteryLevel.high,
+    _ => BatteryLevel.full,
+  };
 }

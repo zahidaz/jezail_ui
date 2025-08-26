@@ -1,5 +1,5 @@
 import 'package:jezail_ui/services/device_service.dart';
-import 'package:jezail_ui/models/device.dart';
+import 'package:jezail_ui/models/device/process_info.dart';
 import 'package:jezail_ui/core/enums/device_enums.dart';
 
 class DeviceRepository {

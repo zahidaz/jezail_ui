@@ -1,5 +1,5 @@
 import 'package:jezail_ui/models/files/file_info.dart';
-import 'package:jezail_ui/presentation/tabs/files/file_utils.dart';
+import 'package:jezail_ui/core/extensions/file_info_display_extensions.dart';
 import 'package:flutter/material.dart';
 import 'package:jezail_ui/repositories/files_repository.dart';
 import 'package:jezail_ui/core/enums/file_enums.dart';
