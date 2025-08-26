@@ -219,7 +219,7 @@ class _TabContainerState extends State<TabContainer> {
       if (tab.path == '/files') {
         return FilesTab(
           key: _filesTabKey,
-          repository: FileRepository(FileService(widget.apiService)),
+          repository: FileRepository(FilesService(widget.apiService)),
         );
       }
       if (tab.path == '/packages') {

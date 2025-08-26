@@ -6,7 +6,7 @@ import '../services/api_service.dart';
 import '../core/exceptions/file_exception.dart';
 
 class FileRepository {
-    final FileService _fileService;
+    final FilesService _fileService;
   FileRepository(this._fileService);
 
   Future<FileInfo> getFileInfo(String path) async {

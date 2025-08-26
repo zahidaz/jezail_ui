@@ -44,7 +44,7 @@ final tabsConfig = [
     path: '/files',
     icon: Icons.folder,
     builder: (apiService) => FilesTab(
-      repository: FileRepository(FileService(apiService)),
+      repository: FileRepository(FilesService(apiService)),
     ),
   ),
   TabInfo(

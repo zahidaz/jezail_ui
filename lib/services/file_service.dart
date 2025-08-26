@@ -3,17 +3,17 @@ import 'package:http/http.dart' as http;
 import 'api_service.dart';
 import '../utils/log.dart';
 
-class FileService {
+class FilesService {
 
   final ApiService _api;
 
-  FileService(this._api);
+  FilesService(this._api);
 
   Future<dynamic> getFileInfo(String path) =>
-      _api.get('/file/info?path=${Uri.encodeComponent(path)}');
+      _api.get('/files/info?path=${Uri.encodeComponent(path)}');
 
   Future<dynamic> listDirectory({String? path}) {
-    String endpoint = '/file/list';
+    String endpoint = '/files/list';
     if (path != null) {
       endpoint += '?path=${Uri.encodeComponent(path)}';
     }
@@ -21,32 +21,32 @@ class FileService {
   }
 
   Future<dynamic> readFile(String path) =>
-      _api.get('/file/read?path=${Uri.encodeComponent(path)}');
+      _api.get('/files/read?path=${Uri.encodeComponent(path)}');
 
   Future<dynamic> writeFile(String path, String content) =>
-      _api.post('/file/write?path=${Uri.encodeComponent(path)}', body: content);
+      _api.post('/files/write?path=${Uri.encodeComponent(path)}', body: content);
 
   Future<dynamic> renameFile(String oldPath, String newPath) =>
-      _api.post('/file/rename?oldPath=${Uri.encodeComponent(oldPath)}&newPath=${Uri.encodeComponent(newPath)}');
+      _api.post('/files/rename?oldPath=${Uri.encodeComponent(oldPath)}&newPath=${Uri.encodeComponent(newPath)}');
 
   Future<dynamic> createDirectory(String path) =>
-      _api.post('/file/mkdir?path=${Uri.encodeComponent(path)}');
+      _api.post('/files/mkdir?path=${Uri.encodeComponent(path)}');
 
   Future<dynamic> changePermissions(String path, String permissions) =>
-      _api.post('/file/chmod?path=${Uri.encodeComponent(path)}&permissions=$permissions');
+      _api.post('/files/chmod?path=${Uri.encodeComponent(path)}&permissions=$permissions');
 
   Future<dynamic> changeOwner(String path, String owner) =>
-      _api.post('/file/chown?path=${Uri.encodeComponent(path)}&owner=$owner');
+      _api.post('/files/chown?path=${Uri.encodeComponent(path)}&owner=$owner');
 
 
   Future<dynamic> changeGroup(String path, String group) =>
-      _api.post('/file/chgrp?path=${Uri.encodeComponent(path)}&group=$group');
+      _api.post('/files/chgrp?path=${Uri.encodeComponent(path)}&group=$group');
 
   Future<dynamic> deleteFile(String path) =>
       _api.delete('/file?path=${Uri.encodeComponent(path)}');
 
   Future<dynamic> doUpload(String destinationPath, Uint8List fileBytes, {String? filename}) async {
-    final uri = Uri.parse('${_api.baseUrl}/file/upload?path=${Uri.encodeComponent(destinationPath)}');
+    final uri = Uri.parse('${_api.baseUrl}/files/upload?path=${Uri.encodeComponent(destinationPath)}');
     
     var request = http.MultipartRequest('POST', uri);
     
@@ -70,13 +70,13 @@ class FileService {
   }
 
   Future<Uint8List> downloadFile(String path) async {
-    final response = await _api.getRaw('/file/download?paths=${Uri.encodeComponent(path)}');
+    final response = await _api.getRaw('/files/download?paths=${Uri.encodeComponent(path)}');
     return response.bodyBytes;
   }
 
   Future<({Uint8List data, String? filename})> downloadFiles(List<String> paths) async {
     final pathsQuery = paths.map((path) => 'paths=${Uri.encodeComponent(path)}').join('&');
-    final response = await _api.getRaw('/file/download?$pathsQuery');
+    final response = await _api.getRaw('/files/download?$pathsQuery');
     
     Log.debug('Download response received');
     Log.debug('Response headers: ${response.headers}');
