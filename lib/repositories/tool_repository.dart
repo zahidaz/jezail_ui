@@ -16,7 +16,7 @@ class ToolRepository {
       final result = await _adbService.getStatus();
       final data = result['data'];
       return AdbStatus(
-        isRunning: data['isRunning'] == 'true',
+        isRunning: data['isRunning'] as bool,
         port: data['port'],
       );
     } catch (e) {
@@ -53,7 +53,7 @@ class ToolRepository {
       final result = await _fridaService.getStatus();
       final data = result['data'];
       return FridaStatus(
-        isRunning: data['isRunning'],
+        isRunning: data['isRunning'] as bool,
         port: data['port'],
         version: data['version'],
       );
@@ -69,7 +69,7 @@ class ToolRepository {
       return FridaInfo(
         currentVersion: data['currentVersion'],
         latestVersion: data['latestVersion'],
-        needsUpdate: data['needsUpdate'],
+        needsUpdate: data['needsUpdate'] as bool,
         installPath: data['installPath'],
       );
     } catch (e) {
