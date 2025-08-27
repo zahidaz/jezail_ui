@@ -53,7 +53,7 @@ class ToolRepository {
       final result = await _fridaService.getStatus();
       final data = result['data'];
       return FridaStatus(
-        isRunning: data['isRunning'] == 'true',
+        isRunning: data['isRunning'],
         port: data['port'],
         version: data['version'],
       );
@@ -69,7 +69,7 @@ class ToolRepository {
       return FridaInfo(
         currentVersion: data['currentVersion'],
         latestVersion: data['latestVersion'],
-        needsUpdate: data['needsUpdate'] == 'true',
+        needsUpdate: data['needsUpdate'],
         installPath: data['installPath'],
       );
     } catch (e) {

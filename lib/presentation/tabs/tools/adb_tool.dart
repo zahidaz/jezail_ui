@@ -171,7 +171,7 @@ class _AdbToolState extends State<AdbTool> {
                     Expanded(child: item.isPath 
                       ? GestureDetector(
                           onTap: () {
-                            // Path copying logic if needed
+                            // 
                           },
                           child: Row(
                             children: [
