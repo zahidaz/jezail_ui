@@ -188,28 +188,34 @@ class _DependenciesCard extends StatelessWidget {
                 ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
               ),
             ),
-            ...dependencies.map(
-              (dep) => ListTile(
-                contentPadding: const EdgeInsets.only(left: 8.0),
-                leading: Icon(
-                  Icons.security,
-                  size: 16,
-                  color: Theme.of(context).colorScheme.onSurface.withAlpha(179),
-                ),
-                title: InkWell(
-                  onTap: () => onLinkTap(dep.url),
-                  child: Text(
-                    dep.name,
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: Theme.of(context).colorScheme.primary,
-                      decoration: TextDecoration.underline,
-                      decorationColor: Theme.of(context).colorScheme.primary,
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: dependencies
+                  .map(
+                    (dep) => ActionChip(
+                      avatar: Icon(Icons.security, size: 18),
+                      label: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(dep.name),
+                          const SizedBox(width: 4),
+                          Icon(
+                            Icons.open_in_new,
+                            size: 12,
+                            color: Theme.of(context).colorScheme.onSecondaryContainer,
+                          ),
+                        ],
+                      ),
+                      onPressed: () => onLinkTap(dep.url),
+                      backgroundColor: Theme.of(context).colorScheme.secondaryContainer,
+                      labelStyle: TextStyle(
+                        color: Theme.of(context).colorScheme.onSecondaryContainer,
+                        fontSize: 12,
+                      ),
                     ),
-                  ),
-                ),
-                subtitle: Text(dep.description),
-                dense: true,
-              ),
+                  )
+                  .toList(),
             ),
           ],
         ),
