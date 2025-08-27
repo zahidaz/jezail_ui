@@ -4,6 +4,7 @@ import 'package:jezail_ui/models/packages/package_info.dart';
 import 'package:jezail_ui/models/packages/details.dart';
 import 'package:jezail_ui/repositories/package_repository.dart';
 import 'package:jezail_ui/core/enums/package_enums.dart';
+import 'package:jezail_ui/core/extensions/snackbar_extensions.dart';
 
 class PackageDetailsPage extends StatefulWidget {
   final PackageInfo? package;
@@ -92,9 +93,7 @@ class _PackageDetailsPageState extends State<PackageDetailsPage>
 
   void _copy(String text, String label) {
     Clipboard.setData(ClipboardData(text: text));
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('$label copied to clipboard')),
-    );
+    context.showInfoSnackBar('$label copied to clipboard');
   }
 
   List<String> get _filteredPermissions {
@@ -750,19 +749,12 @@ class _PackageDetailsPageState extends State<PackageDetailsPage>
       try {
         await widget.repository.clearPackageData(widget.package!.packageName);
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Cleared data for ${widget.package!.name}')),
-          );
+          context.showSuccessSnackBar('Cleared data for ${widget.package!.name}');
           await _loadPackageData();
         }
       } catch (e) {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Failed to clear data: $e'),
-              backgroundColor: Colors.red,
-            ),
-          );
+          context.showErrorSnackBar('Failed to clear data: $e');
         }
       }
     }
@@ -792,19 +784,12 @@ class _PackageDetailsPageState extends State<PackageDetailsPage>
       try {
         await widget.repository.clearPackageCache(widget.package!.packageName);
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Cleared cache for ${widget.package!.name}')),
-          );
+          context.showSuccessSnackBar('Cleared cache for ${widget.package!.name}');
           await _loadPackageData();
         }
       } catch (e) {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Failed to clear cache: $e'),
-              backgroundColor: Colors.red,
-            ),
-          );
+          context.showErrorSnackBar('Failed to clear cache: $e');
         }
       }
     }
@@ -814,19 +799,12 @@ class _PackageDetailsPageState extends State<PackageDetailsPage>
     try {
       await widget.repository.grantPermission(widget.package!.packageName, permission);
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Granted permission: $permission')),
-        );
+        context.showSuccessSnackBar('Granted permission: $permission');
         await _loadPackageData();
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Failed to grant permission: $e'),
-            backgroundColor: Colors.red,
-          ),
-        );
+        context.showErrorSnackBar('Failed to grant permission: $e');
       }
     }
   }
@@ -855,19 +833,12 @@ class _PackageDetailsPageState extends State<PackageDetailsPage>
       try {
         await widget.repository.revokePermission(widget.package!.packageName, permission);
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Revoked permission: $permission')),
-          );
+          context.showSuccessSnackBar('Revoked permission: $permission');
           await _loadPackageData();
         }
       } catch (e) {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Failed to revoke permission: $e'),
-              backgroundColor: Colors.red,
-            ),
-          );
+          context.showErrorSnackBar('Failed to revoke permission: $e');
         }
       }
     }

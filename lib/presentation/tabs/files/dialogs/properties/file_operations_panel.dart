@@ -1,6 +1,7 @@
 import 'package:jezail_ui/models/files/file_info.dart';
 import 'package:flutter/material.dart';
 import 'package:jezail_ui/repositories/files_repository.dart';
+import 'package:jezail_ui/core/extensions/snackbar_extensions.dart';
 
 final class FileOperationsPanel extends StatelessWidget {
   const FileOperationsPanel({
@@ -160,18 +161,16 @@ final class FileOperationsPanel extends StatelessWidget {
   }
 
   Future<void> _changePermissions(BuildContext context, String permissions) async {
-    final messenger = ScaffoldMessenger.of(context);
-    
     try {
       await repository.changePermissions(_getFilePath(), permissions);
-      messenger.showSnackBar(
-        SnackBar(content: Text('Changed permissions to $permissions')),
-      );
+      if (context.mounted) {
+        context.showSuccessSnackBar('Changed permissions to $permissions');
+      }
       onChanged();
     } catch (e) {
-      messenger.showSnackBar(
-        SnackBar(content: Text('Failed to change permissions: $e')),
-      );
+      if (context.mounted) {
+        context.showErrorSnackBar('Failed to change permissions: $e');
+      }
     }
   }
 
@@ -406,19 +405,17 @@ final class _PermissionEditorDialogState extends State<PermissionEditorDialog> {
   }
 
   Future<void> _applyChanges() async {
-    final messenger = ScaffoldMessenger.of(context);
-    
     try {
       await widget.repository.changePermissions(widget.filePath, _calculateOctal());
-      messenger.showSnackBar(
-        const SnackBar(content: Text('Permissions updated successfully')),
-      );
+      if (context.mounted) {
+        context.showSuccessSnackBar('Permissions updated successfully');
+      }
       widget.onChanged();
       if (mounted) Navigator.pop(context);
     } catch (e) {
-      messenger.showSnackBar(
-        SnackBar(content: Text('Failed to update permissions: $e')),
-      );
+      if (context.mounted) {
+        context.showErrorSnackBar('Failed to update permissions: $e');
+      }
     }
   }
 }
@@ -530,29 +527,28 @@ final class _OwnershipEditorDialogState extends State<OwnershipEditorDialog> {
   }
 
   Future<void> _applyChanges() async {
-    final messenger = ScaffoldMessenger.of(context);
     final newOwner = _ownerController.text.trim();
     final newGroup = _groupController.text.trim();
     
     if (newOwner.isEmpty || newGroup.isEmpty) {
-      messenger.showSnackBar(
-        const SnackBar(content: Text('Owner and group cannot be empty')),
-      );
+      if (context.mounted) {
+        context.showErrorSnackBar('Owner and group cannot be empty');
+      }
       return;
     }
 
     try {
       await widget.repository.changeOwner(widget.filePath, newOwner);
       await widget.repository.changeGroup(widget.filePath, newGroup);
-      messenger.showSnackBar(
-        SnackBar(content: Text('Changed ownership to $newOwner:$newGroup')),
-      );
+      if (context.mounted) {
+        context.showSuccessSnackBar('Changed ownership to $newOwner:$newGroup');
+      }
       widget.onChanged();
       if (mounted) Navigator.pop(context);
     } catch (e) {
-      messenger.showSnackBar(
-        SnackBar(content: Text('Failed to change ownership: $e')),
-      );
+      if (context.mounted) {
+        context.showErrorSnackBar('Failed to change ownership: $e');
+      }
     }
   }
 }

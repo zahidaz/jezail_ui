@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:jezail_ui/models/files/file_info.dart';
+import 'package:jezail_ui/core/extensions/snackbar_extensions.dart';
 
 final class FileContextMenu extends StatelessWidget {
   const FileContextMenu({
@@ -157,21 +158,11 @@ final class FileContextMenu extends StatelessWidget {
     try {
       await Clipboard.setData(ClipboardData(text: text));
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('$label copied to clipboard'),
-            duration: const Duration(seconds: 2),
-          ),
-        );
+        context.showInfoSnackBar('$label copied to clipboard');
       }
     } catch (e) {
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Failed to copy $label: $e'),
-            duration: const Duration(seconds: 3),
-          ),
-        );
+        context.showErrorSnackBar('Failed to copy $label: $e');
       }
     }
   }

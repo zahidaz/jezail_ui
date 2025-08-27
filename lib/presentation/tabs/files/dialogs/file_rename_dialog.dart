@@ -1,5 +1,6 @@
 import 'package:jezail_ui/models/files/file_info.dart';
 import 'package:flutter/material.dart';
+import 'package:jezail_ui/core/extensions/snackbar_extensions.dart';
 
 class FileRenameDialog extends StatefulWidget {
   const FileRenameDialog({
@@ -149,12 +150,7 @@ class _FileRenameDialogState extends State<FileRenameDialog> {
       await widget.onRename(newName);
       if (mounted) {
         Navigator.pop(context, true);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('${widget.file.isDirectory ? 'Directory' : 'File'} renamed successfully'),
-            backgroundColor: Theme.of(context).colorScheme.primary,
-          ),
-        );
+        context.showSuccessSnackBar('${widget.file.isDirectory ? 'Directory' : 'File'} renamed successfully');
       }
     } catch (e) {
       if (mounted) {

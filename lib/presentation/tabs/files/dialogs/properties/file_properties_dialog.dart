@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:jezail_ui/repositories/files_repository.dart';
 import 'package:jezail_ui/presentation/tabs/files/dialogs/properties/file_operations_panel.dart';
+import 'package:jezail_ui/core/extensions/snackbar_extensions.dart';
 
 class FilePropertiesDialog extends StatefulWidget {
   const FilePropertiesDialog({
@@ -58,9 +59,7 @@ class _FilePropertiesDialogState extends State<FilePropertiesDialog> {
         setState(() {
           _isRefreshing = false;
         });
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to refresh file info: $e')),
-        );
+        context.showErrorSnackBar('Failed to refresh file info: $e');
       }
     }
   }
@@ -74,21 +73,11 @@ class _FilePropertiesDialogState extends State<FilePropertiesDialog> {
     try {
       await Clipboard.setData(ClipboardData(text: text));
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('$label copied to clipboard'),
-            duration: const Duration(seconds: 2),
-          ),
-        );
+        context.showInfoSnackBar('$label copied to clipboard');
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Failed to copy $label: $e'),
-            duration: const Duration(seconds: 3),
-          ),
-        );
+        context.showErrorSnackBar('Failed to copy $label: $e');
       }
     }
   }

@@ -1,6 +1,7 @@
 import 'package:jezail_ui/models/files/file_info.dart';
 import 'package:flutter/material.dart';
 import 'package:jezail_ui/repositories/files_repository.dart';
+import 'package:jezail_ui/core/extensions/snackbar_extensions.dart';
 
 
 class FileEditDialog extends StatefulWidget {
@@ -72,18 +73,14 @@ class _FileEditDialogState extends State<FileEditDialog> {
       
       if (mounted) {
         Navigator.pop(context);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Saved ${widget.file.displayName}')),
-        );
+        context.showSuccessSnackBar('Saved ${widget.file.displayName}');
       }
     } catch (e) {
       if (mounted) {
         setState(() {
           _isSaving = false;
         });
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Save failed: $e')),
-        );
+        context.showErrorSnackBar('Save failed: $e');
       }
     }
   }

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:jezail_ui/repositories/files_repository.dart';
+import 'package:jezail_ui/core/extensions/snackbar_extensions.dart';
 
 class FileCreateDialog extends StatefulWidget {
   const FileCreateDialog({
@@ -55,18 +56,14 @@ class _FileCreateDialogState extends State<FileCreateDialog> {
       if (mounted) {
         Navigator.pop(context);
         widget.onCreated();
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Created ${widget.isDirectory ? 'directory' : 'file'}: $name')),
-        );
+        context.showSuccessSnackBar('Created ${widget.isDirectory ? 'directory' : 'file'}: $name');
       }
     } catch (e) {
       if (mounted) {
         setState(() {
           _isCreating = false;
         });
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to create ${widget.isDirectory ? 'directory' : 'file'}: $e')),
-        );
+        context.showErrorSnackBar('Failed to create ${widget.isDirectory ? 'directory' : 'file'}: $e');
       }
     }
   }

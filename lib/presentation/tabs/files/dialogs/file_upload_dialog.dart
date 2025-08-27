@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:jezail_ui/repositories/files_repository.dart';
+import 'package:jezail_ui/core/extensions/snackbar_extensions.dart';
 
 class FileUploadDialog extends StatefulWidget {
   const FileUploadDialog({
@@ -72,18 +73,14 @@ class _FileUploadDialogState extends State<FileUploadDialog> {
       if (mounted) {
         Navigator.pop(context);
         widget.onUploaded();
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Uploaded ${_selectedFiles.length} files')),
-        );
+        context.showSuccessSnackBar('Uploaded ${_selectedFiles.length} files');
       }
     } catch (e) {
       if (mounted) {
         setState(() {
           _isUploading = false;
         });
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Upload failed: $e')),
-        );
+        context.showErrorSnackBar('Upload failed: $e');
       }
     }
   }

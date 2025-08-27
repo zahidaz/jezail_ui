@@ -3,7 +3,7 @@ import 'package:jezail_ui/repositories/tool_repository.dart';
 import 'package:jezail_ui/models/tools/adb_status.dart';
 import 'package:jezail_ui/models/tools/frida_status.dart';
 import 'package:jezail_ui/models/tools/frida_info.dart';
-import 'package:jezail_ui/core/extensions/build_context_extensions.dart';
+import 'package:jezail_ui/core/extensions/snackbar_extensions.dart';
 
 class ToolsTab extends StatefulWidget {
   final ToolRepository repository;
@@ -43,7 +43,7 @@ class _ToolsTabState extends State<ToolsTab> {
         });
       }
     } catch (e) {
-      if (mounted) context.showSnackBar('Failed to load tools status: $e');
+      if (mounted) context.showErrorSnackBar('Failed to load tools status: $e');
     } finally {
       if (mounted) setState(() => isLoading = false);
     }
@@ -61,9 +61,9 @@ class _ToolsTabState extends State<ToolsTab> {
       };
       
       await _loadStatus();
-      if (mounted) context.showSnackBar('Frida $action completed successfully');
+      if (mounted) context.showSuccessSnackBar('Frida $action completed successfully');
     } catch (e) {
-      if (mounted) context.showSnackBar('Frida $action failed: $e');
+      if (mounted) context.showErrorSnackBar('Frida $action failed: $e');
     } finally {
       if (mounted) setState(() => isLoading = false);
     }
@@ -79,9 +79,9 @@ class _ToolsTabState extends State<ToolsTab> {
       };
       
       await _loadStatus();
-      if (mounted) context.showSnackBar('ADB $action completed successfully');
+      if (mounted) context.showSuccessSnackBar('ADB $action completed successfully');
     } catch (e) {
-      if (mounted) context.showSnackBar('ADB $action failed: $e');
+      if (mounted) context.showErrorSnackBar('ADB $action failed: $e');
     } finally {
       if (mounted) setState(() => isLoading = false);
     }

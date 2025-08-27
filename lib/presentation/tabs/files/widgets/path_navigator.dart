@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:jezail_ui/core/extensions/snackbar_extensions.dart';
 
 class PathNavigator extends StatefulWidget {
   const PathNavigator({
@@ -228,12 +229,7 @@ class _PathNavigatorState extends State<PathNavigator> {
 
   void _copyPath(BuildContext context) {
     Clipboard.setData(ClipboardData(text: widget.currentPath));
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Path copied: ${widget.currentPath}'),
-        duration: const Duration(seconds: 2),
-      ),
-    );
+    context.showInfoSnackBar('Path copied: ${widget.currentPath}');
   }
 
   void _clearSearch() {
