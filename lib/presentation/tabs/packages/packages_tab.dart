@@ -121,7 +121,6 @@ class PackagesTabState extends State<PackagesTab> {
   }
 
   Future<void> _showPackageDetails(PackageInfo pkg) async {
-    // Update URL
     context.go('/packages/details?package=${pkg.packageName}');
     
     _updateState((s) => (
@@ -190,7 +189,6 @@ class PackagesTabState extends State<PackagesTab> {
     _pageController.animateToPage(0, duration: Duration(milliseconds: 300), curve: Curves.easeOut);
   }
 
-  // Public methods for URL navigation
   Future<void> navigateToPackageDetails(String packageName) async {
     final pkg = _state.packages.firstWhere(
       (p) => p.packageName == packageName,

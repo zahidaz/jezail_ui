@@ -37,7 +37,6 @@ class _PackageDetailsPageState extends State<PackageDetailsPage>
   bool isLoading = true;
   String? error;
 
-  // Filter states
   String _permissionFilter = '';
   String _componentFilter = '';
   bool _showOnlyExported = false;

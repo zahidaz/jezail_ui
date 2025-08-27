@@ -120,7 +120,6 @@ class _MyHomePageState extends State<MyHomePage> {
     final location = GoRouterState.of(context).fullPath ?? '';
     final path = location.split('?').first;
     
-    // Handle packages sub-routes
     if (path.startsWith('/packages')) {
       return tabsConfig.indexWhere((tab) => tab.path == '/packages');
     }
@@ -231,9 +230,7 @@ class _TabContainerState extends State<TabContainer> {
       return tab.builder(widget.apiService);
     }).toList();
 
-    // Handle initial navigation
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      // Handle files tab initial path
       if (widget.initialFilePath != null &&
           widget.currentTabIndex == tabsConfig.indexWhere((tab) => tab.path == '/files')) {
         final state = _filesTabKey.currentState;
@@ -242,7 +239,6 @@ class _TabContainerState extends State<TabContainer> {
         }
       }
       
-      // Handle packages tab initial state
       if (widget.currentTabIndex == tabsConfig.indexWhere((tab) => tab.path == '/packages')) {
         final state = _packagesTabKey.currentState;
         if (state is PackagesTabState) {
@@ -258,7 +254,6 @@ class _TabContainerState extends State<TabContainer> {
   void didUpdateWidget(TabContainer oldWidget) {
     super.didUpdateWidget(oldWidget);
     
-    // Handle files tab path changes
     if (widget.initialFilePath != oldWidget.initialFilePath && 
         widget.initialFilePath != null &&
         widget.currentTabIndex == tabsConfig.indexWhere((tab) => tab.path == '/files')) {
@@ -270,7 +265,6 @@ class _TabContainerState extends State<TabContainer> {
       });
     }
     
-    // Handle packages tab state changes
     if ((widget.initialPackageName != oldWidget.initialPackageName ||
          widget.isPackageDetailsView != oldWidget.isPackageDetailsView) &&
         widget.currentTabIndex == tabsConfig.indexWhere((tab) => tab.path == '/packages')) {

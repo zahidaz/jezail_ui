@@ -22,7 +22,6 @@ class FilesTabState extends State<FilesTab> {
   }
 
   void _onPathChanged(String path) {
-    // Update URL with current path
     if (path == '/') {
       context.go('/files');
     } else {
