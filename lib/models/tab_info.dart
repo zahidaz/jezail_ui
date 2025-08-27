@@ -12,7 +12,7 @@ import 'package:jezail_ui/services/frida_service.dart';
 import 'package:jezail_ui/presentation/tabs/packages/packages_tab.dart';
 import 'package:jezail_ui/presentation/tabs/files/files_tab.dart';
 import 'package:jezail_ui/presentation/tabs/device/device_tab.dart';
-import 'package:jezail_ui/presentation/tabs/tools_tab.dart';
+import 'package:jezail_ui/presentation/tabs/tools/tools_tab.dart';
 import 'package:jezail_ui/presentation/tabs/settings_tab.dart';
 import 'package:jezail_ui/presentation/tabs/about_tab.dart';
 
