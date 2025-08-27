@@ -68,40 +68,23 @@ class _AppOverviewCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Card(
-      child: Container(
-        width: double.infinity,
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            colors: [
-              Theme.of(context).colorScheme.primaryContainer,
-              Theme.of(context).colorScheme.secondaryContainer,
-            ],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          ),
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: Padding(
-          padding: const EdgeInsets.all(20.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                appName,
-                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                  fontWeight: FontWeight.bold,
-                  color: Theme.of(context).colorScheme.onPrimaryContainer,
-                ),
+      child: Padding(
+        padding: const EdgeInsets.all(20.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              appName,
+              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                fontWeight: FontWeight.bold,
               ),
-              const SizedBox(height: 12),
-              Text(
-                description,
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: Theme.of(context).colorScheme.onPrimaryContainer,
-                ),
-              ),
-            ],
-          ),
+            ),
+            const SizedBox(height: 12),
+            Text(
+              description,
+              style: Theme.of(context).textTheme.bodyMedium,
+            ),
+          ],
         ),
       ),
     );
@@ -142,7 +125,18 @@ class _DeveloperCard extends StatelessWidget {
                   .map(
                     (link) => ActionChip(
                       avatar: Icon(link.icon, size: 18),
-                      label: Text(link.label),
+                      label: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(link.label),
+                          const SizedBox(width: 4),
+                          Icon(
+                            Icons.open_in_new,
+                            size: 12,
+                            color: Theme.of(context).colorScheme.onSecondaryContainer,
+                          ),
+                        ],
+                      ),
                       onPressed: () => onLinkTap(link.url),
                       backgroundColor: Theme.of(
                         context,
