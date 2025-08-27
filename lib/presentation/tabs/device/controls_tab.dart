@@ -60,7 +60,8 @@ class _ControlsTabState extends State<ControlsTab> with SingleTickerProviderStat
   Future<void> toggleSelinux() async {
     HapticFeedback.mediumImpact();
     await action('SELinux toggled', () async {
-      await widget.repository.toggleSelinux();
+      final enable = selinuxStatus?.toLowerCase() != 'enforcing';
+      await widget.repository.toggleSelinux(enable);
       await loadSelinuxStatus();
     });
   }

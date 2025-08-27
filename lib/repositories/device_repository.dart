@@ -16,12 +16,12 @@ class DeviceRepository {
   Future<Map<String, dynamic>> getStorageDetails() async => await _deviceService.getStorageDetails();
   Future<Map<String, dynamic>> getNetworkInfo() async => await _deviceService.getNetwork();
   Future<Map<String, dynamic>> getSelinuxStatus() async => await _deviceService.getSelinuxStatus();
-  Future<void> toggleSelinux() => _deviceService.toggleSelinux(true);
+  Future<void> toggleSelinux(bool enable) => _deviceService.toggleSelinux(enable);
   Future<Map<String, dynamic>> getSystemProperties() async => await _deviceService.getSystemProperties();
 
   Future<String> getSystemProperty(String key) async {
     final result = await _deviceService.getSystemProperty(key);
-    return result['value'] ?? '';
+    return result['value'] as String;
   }
 
   Future<void> setSystemProperty(String key, String value) => 

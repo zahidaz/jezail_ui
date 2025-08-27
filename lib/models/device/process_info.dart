@@ -24,14 +24,14 @@ class ProcessInfo {
   double? get cpuUsage => null;
 
   factory ProcessInfo.fromJson(Map<String, dynamic> json) => ProcessInfo(
-    pid: json['pid'] ?? 0,
-    name: json['name'] ?? '',
-    ppid: json['ppid'],
-    user: json['user'],
-    vsz: json['vsz'],
-    stat: json['stat'],
-    addr: json['addr'],
-    wchan: json['wchan'],
+    pid: json['pid'] as int,
+    name: json['name'] as String,
+    ppid: json['ppid'] as int?,
+    user: json['user'] as String?,
+    vsz: json['vsz'] as int?,
+    stat: json['stat'] as String?,
+    addr: json['addr'] as String?,
+    wchan: json['wchan'] as String?,
   );
 }
 
