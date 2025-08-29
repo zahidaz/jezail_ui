@@ -1,4 +1,4 @@
-import 'package:jezail_ui/main.dart';
+import 'package:jezail_ui/app_config.dart';
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -43,7 +43,7 @@ class AboutTab extends StatelessWidget {
           constraints: const BoxConstraints(maxWidth: 600),
           child: Column(
             children: [
-              _AppOverviewCard(appName: appName, description: _description),
+              _AppOverviewCard(appName: AppConfig.appName, description: _description),
               const SizedBox(height: 16),
               _DeveloperCard(links: _links, onLinkTap: _launchUrl),
               const SizedBox(height: 16),

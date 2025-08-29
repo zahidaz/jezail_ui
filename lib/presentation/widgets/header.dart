@@ -1,6 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:jezail_ui/main.dart' show appName;
+import 'package:jezail_ui/app_config.dart';
 import 'package:jezail_ui/services/device_service.dart';
 import 'package:jezail_ui/core/extensions/snackbar_extensions.dart';
 import 'package:jezail_ui/presentation/utils/dialog_utils.dart';
@@ -82,7 +82,7 @@ class _HeaderState extends State<Header> with TickerProviderStateMixin {
                     Padding(
                       padding: const EdgeInsets.only(left: 12, right: 24),
                       child: Text(
-                        appName,
+                        AppConfig.appName,
                         style: TextStyle(
                           color: Colors.white,
                           fontSize: isCompact ? 16 : 18,

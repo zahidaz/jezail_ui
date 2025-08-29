@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:jezail_ui/app_config.dart';
 import 'package:logger/logger.dart';
 import 'package:go_router/go_router.dart';
 import 'package:jezail_ui/models/tab_info.dart';
@@ -14,8 +15,6 @@ import 'package:jezail_ui/repositories/package_repository.dart';
 import 'package:jezail_ui/presentation/tabs/packages/packages_tab.dart';
 import 'package:jezail_ui/core/log.dart';
 import 'package:jezail_ui/presentation/widgets/header.dart';
-
-const appName = "JEZAIL";
 
 final _router = GoRouter(
   routes: [
@@ -76,7 +75,7 @@ class MyWebApp extends StatelessWidget {
   Widget build(BuildContext context) {
     BrowserContextMenu.disableContextMenu();
     return MaterialApp.router(
-      title: appName,
+      title: AppConfig.appName,
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
         useMaterial3: true,
@@ -103,7 +102,7 @@ class _MyHomePageState extends State<MyHomePage> {
   @override
   void initState() {
     super.initState();
-    apiService = ApiService('http://localhost:8080/api');
+    apiService = ApiService('${AppConfig.baseUrl}/api');
   }
 
   void _onTabSelected(int index) {
