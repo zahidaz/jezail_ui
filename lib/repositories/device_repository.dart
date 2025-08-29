@@ -21,7 +21,7 @@ class DeviceRepository {
 
   Future<String> getSystemProperty(String key) async {
     final result = await _deviceService.getSystemProperty(key);
-    return result['value'] as String;
+    return result['data']['value'] as String;
   }
 
   Future<void> setSystemProperty(String key, String value) => 
@@ -37,14 +37,14 @@ class DeviceRepository {
   Future<void> killProcess(int pid) => _deviceService.killProcessByPid(pid);
   Future<void> killProcessByName(String name) => _deviceService.killProcessByName(name);
 
-  Future<List<String>> getLogs(LogType logType, {String? filter}) async {
+  Future<List<String>> getLogs(LogType logType, {String? filter, int? lines}) async {
     final result = await switch (logType) {
-      LogType.main => _deviceService.getAllLogs(),
-      LogType.system => _deviceService.getSystemLogs(),
-      LogType.kernel => _deviceService.getKernelLogs(),
-      LogType.radio => _deviceService.getRadioLogs(),
-      LogType.crash => _deviceService.getCrashLogs(),
-      LogType.events => _deviceService.getEventLogs(),
+      LogType.main => _deviceService.getAllLogs(lines: lines, filter: filter),
+      LogType.system => _deviceService.getSystemLogs(lines: lines, filter: filter),
+      LogType.kernel => _deviceService.getKernelLogs(lines: lines, filter: filter),
+      LogType.radio => _deviceService.getRadioLogs(lines: lines, filter: filter),
+      LogType.crash => _deviceService.getCrashLogs(lines: lines, filter: filter),
+      LogType.events => _deviceService.getEventLogs(lines: lines, filter: filter),
     };
     return List<String>.from(result['data'] ?? []);
   }

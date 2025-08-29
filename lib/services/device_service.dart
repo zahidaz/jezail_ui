@@ -32,7 +32,7 @@ class DeviceService {
   Future<dynamic> getSystemProperty(String key) =>
       _api.get('/device/system/properties/$key');
   Future<void> setSystemProperty(String key, String value) =>
-      _api.post('/device/system/properties/$key', body: {'value': value});
+      _api.post('/device/system/properties/$key', body: value);
 
   Future<dynamic> listProcesses() => _api.get('/device/processes');
   Future<dynamic> getProcess(int pid) =>
@@ -42,12 +42,36 @@ class DeviceService {
   Future<void> killProcessByName(String name) =>
       _api.delete('/device/processes/name/$name');
 
-  Future<dynamic> getAllLogs() => _api.get('/device/logs');
-  Future<dynamic> getKernelLogs() => _api.get('/device/logs/kernel');
-  Future<dynamic> getRadioLogs() => _api.get('/device/logs/radio');
-  Future<dynamic> getSystemLogs() => _api.get('/device/logs/system');
-  Future<dynamic> getCrashLogs() => _api.get('/device/logs/crash');
-  Future<dynamic> getEventLogs() => _api.get('/device/logs/events');
+  Future<dynamic> getAllLogs({int? lines, String? filter}) {
+    return _api.get(_buildLogUrl('/device/logs', lines: lines, filter: filter));
+  }
+  
+  Future<dynamic> getKernelLogs({int? lines, String? filter}) {
+    return _api.get(_buildLogUrl('/device/logs/kernel', lines: lines, filter: filter));
+  }
+  
+  Future<dynamic> getRadioLogs({int? lines, String? filter}) {
+    return _api.get(_buildLogUrl('/device/logs/radio', lines: lines, filter: filter));
+  }
+  
+  Future<dynamic> getSystemLogs({int? lines, String? filter}) {
+    return _api.get(_buildLogUrl('/device/logs/system', lines: lines, filter: filter));
+  }
+  
+  Future<dynamic> getCrashLogs({int? lines, String? filter}) {
+    return _api.get(_buildLogUrl('/device/logs/crash', lines: lines, filter: filter));
+  }
+  
+  Future<dynamic> getEventLogs({int? lines, String? filter}) {
+    return _api.get(_buildLogUrl('/device/logs/events', lines: lines, filter: filter));
+  }
+
+  String _buildLogUrl(String path, {int? lines, String? filter}) {
+    final params = <String>[];
+    if (lines != null) params.add('lines=$lines');
+    if (filter != null && filter.isNotEmpty) params.add('filter=${Uri.encodeComponent(filter)}');
+    return params.isEmpty ? path : '$path?${params.join('&')}';
+  }
   Future<void> clearLogs() => _api.delete('/device/logs');
 
   Future<dynamic> getBattery() => _api.get('/device/battery');

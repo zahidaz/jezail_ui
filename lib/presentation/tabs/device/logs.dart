@@ -5,6 +5,7 @@ import 'dart:async';
 import 'package:jezail_ui/core/enums/device_enums.dart';
 import 'package:jezail_ui/repositories/device_repository.dart';
 import 'package:jezail_ui/core/extensions/snackbar_extensions.dart';
+import 'package:jezail_ui/presentation/tabs/device/widgets/search.dart';
 
 class LogsTab extends StatefulWidget {
   const LogsTab({super.key, required this.repository});
@@ -21,6 +22,8 @@ class _LogsTabState extends State<LogsTab> with SingleTickerProviderStateMixin {
   bool loading = false;
   Timer? debounce;
   late AnimationController anim;
+  int logLimit = 1000;
+  final logLimitController = TextEditingController(text: '1000');
 
   List<String> get logs => filter.isEmpty ? allLogs : 
     allLogs.where((log) => log.toLowerCase().contains(filter.toLowerCase())).toList();
@@ -36,6 +39,7 @@ class _LogsTabState extends State<LogsTab> with SingleTickerProviderStateMixin {
   void dispose() {
     anim.dispose();
     debounce?.cancel();
+    logLimitController.dispose();
     super.dispose();
   }
 
@@ -44,7 +48,7 @@ class _LogsTabState extends State<LogsTab> with SingleTickerProviderStateMixin {
     setState(() => loading = true);
     anim.repeat();
     try {
-      allLogs = await widget.repository.getLogs(type);
+      allLogs = await widget.repository.getLogs(type, lines: logLimit);
     } catch (e) {
       if (mounted) context.showErrorSnackBar('Failed to load logs');
     } finally {
@@ -70,48 +74,110 @@ class _LogsTabState extends State<LogsTab> with SingleTickerProviderStateMixin {
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
     return Column(children: [
-      Container(
+      Padding(
         padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(border: Border(bottom: BorderSide(color: cs.outline.withAlpha(25)))),
-        child: Column(children: [
-          Row(children: [
-            Icon(Icons.article, color: cs.primary, size: 20),
+        child: Row(
+          children: [
+            Expanded(
+              child: CompactSearchField(
+                hintText: 'Filter logs...',
+                onChanged: onSearch,
+                onRefresh: null,
+                isLoading: false,
+                animationController: null,
+              ),
+            ),
             const SizedBox(width: 8),
-            const Text('Logs', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600)),
+            SizedBox(
+              width: 100,
+              child: TextField(
+                controller: logLimitController,
+                keyboardType: TextInputType.number,
+                inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                decoration: InputDecoration(
+                  labelText: 'Lines',
+                  border: const OutlineInputBorder(),
+                  isDense: true,
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+                  labelStyle: TextStyle(fontSize: 12, color: cs.onSurfaceVariant),
+                ),
+                style: const TextStyle(fontSize: 12),
+                onSubmitted: (value) {
+                  final newLimit = int.tryParse(value) ?? 1000;
+                  if (newLimit > 0 && newLimit <= 10000) {
+                    logLimit = newLimit;
+                    load();
+                  } else {
+                    logLimitController.text = logLimit.toString();
+                    context.showErrorSnackBar('Lines must be 1-10000');
+                  }
+                },
+              ),
+            ),
             const SizedBox(width: 8),
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-              decoration: BoxDecoration(color: cs.primaryContainer, borderRadius: BorderRadius.circular(8)),
-              child: Text('${logs.length}', style: TextStyle(color: cs.onPrimaryContainer, fontSize: 12)),
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: cs.surface,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: cs.outline.withAlpha(25)),
+              ),
+              child: GestureDetector(
+                onTap: load,
+                child: loading
+                    ? SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: RotationTransition(
+                          turns: anim,
+                          child: Icon(
+                            Icons.refresh,
+                            color: cs.primary,
+                            size: 18,
+                          ),
+                        ),
+                      )
+                    : Icon(
+                        Icons.refresh,
+                        color: cs.primary,
+                        size: 18,
+                      ),
+              ),
             ),
-            const Spacer(),
+            const SizedBox(width: 8),
             IconButton(
               onPressed: () => context.runWithFeedback(
                 action: widget.repository.clearLogs,
                 successMessage: 'Cleared', errorMessage: 'Clear failed'),
-              icon: const Icon(Icons.delete_outline, size: 20),
+              icon: Icon(Icons.delete_outline, color: cs.error, size: 20),
+              tooltip: 'Clear logs',
             ),
-            loading ? RotationTransition(turns: anim, child: Icon(Icons.refresh, color: cs.primary, size: 20))
-                   : IconButton(onPressed: load, icon: const Icon(Icons.refresh, size: 20)),
-          ]),
-          const SizedBox(height: 12),
-          SearchBar(
-            hintText: 'Filter logs...',
-            leading: const Icon(Icons.search, size: 18),
-            onChanged: onSearch,
-            constraints: const BoxConstraints(minHeight: 40),
-          ),
-          const SizedBox(height: 12),
+          ],
+        ),
+      ),
+      Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        child: Column(children: [
           Wrap(
             spacing: 8,
-            children: LogType.values.map((t) => FilterChip(
-              selected: t == type,
-              onSelected: (_) => setState(() { type = t; filter = ''; load(); }),
-              label: Text(t.displayName, style: const TextStyle(fontSize: 12)),
-              avatar: Icon(t.icon, size: 14),
-              materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-              showCheckmark: false,
-            )).toList(),
+            children: LogType.values.map((t) {
+              final isSelected = t == type;
+              return FilterChip(
+                selected: isSelected,
+                onSelected: (_) => setState(() { 
+                  type = t; 
+                  filter = ''; 
+                  load(); 
+                }),
+                label: Text(
+                  isSelected ? '${t.displayName} (${allLogs.length})' : t.displayName,
+                  style: const TextStyle(fontSize: 12),
+                ),
+                avatar: Icon(t.icon, size: 14),
+                materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                showCheckmark: false,
+              );
+            }).toList(),
           ),
         ]),
       ),

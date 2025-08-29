@@ -18,3 +18,18 @@ enum ProcessSort {
     ProcessSort.state => 'State',
   };
 }
+
+enum ProcessFilter {
+  all(Icons.apps),
+  system(Icons.settings),
+  user(Icons.person);
+
+  const ProcessFilter(this.icon);
+  final IconData icon;
+
+  String get displayName => switch (this) {
+    ProcessFilter.all => 'All',
+    ProcessFilter.system => 'System',
+    ProcessFilter.user => 'User',
+  };
+}
