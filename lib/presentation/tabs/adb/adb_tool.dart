@@ -1,28 +1,27 @@
 import 'package:flutter/material.dart';
 import 'package:jezail_ui/core/extensions/snackbar_extensions.dart';
 import 'package:jezail_ui/models/tools/adb_status.dart';
-import 'package:jezail_ui/repositories/tool_repository.dart';
+import 'package:jezail_ui/repositories/adb_repository.dart';
 
 class _StatusItem {
   final String label;
   final String value;
   final Color? color;
-  final bool isPath;
-  
-  _StatusItem(this.label, this.value, [this.color, this.isPath = false]);
+
+  _StatusItem(this.label, this.value, [this.color]);
 }
 
 class _ActionButton {
   final String label;
   final IconData icon;
   final VoidCallback? onPressed;
-  
+
   _ActionButton(this.label, this.icon, this.onPressed);
 }
 
 class AdbTool extends StatefulWidget {
-  final ToolRepository repository;
-  
+  final AdbRepository repository;
+
   const AdbTool({super.key, required this.repository});
 
   @override
@@ -42,7 +41,7 @@ class _AdbToolState extends State<AdbTool> {
   Future<void> _loadStatus() async {
     setState(() => isLoading = true);
     try {
-      final adb = await widget.repository.getAdbStatus();
+      final adb = await widget.repository.getStatus();
       if (mounted) setState(() => adbStatus = adb);
     } catch (e) {
       if (mounted) context.showErrorSnackBar('Failed to load ADB status: $e');
@@ -54,7 +53,7 @@ class _AdbToolState extends State<AdbTool> {
   Future<void> _startAdb() async {
     setState(() => isLoading = true);
     try {
-      await widget.repository.startAdb();
+      await widget.repository.start();
       await _loadStatus();
       if (mounted) context.showSuccessSnackBar('ADB started successfully');
     } catch (e) {
@@ -67,7 +66,7 @@ class _AdbToolState extends State<AdbTool> {
   Future<void> _stopAdb() async {
     setState(() => isLoading = true);
     try {
-      await widget.repository.stopAdb();
+      await widget.repository.stop();
       await _loadStatus();
       if (mounted) context.showSuccessSnackBar('ADB stopped successfully');
     } catch (e) {
@@ -87,7 +86,10 @@ class _AdbToolState extends State<AdbTool> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Paste your ADB public key below:', style: Theme.of(context).textTheme.bodyMedium),
+            Text(
+              'Paste your ADB public key below:',
+              style: Theme.of(context).textTheme.bodyMedium,
+            ),
             const SizedBox(height: 16),
             TextField(
               controller: controller,
@@ -98,12 +100,23 @@ class _AdbToolState extends State<AdbTool> {
               ),
             ),
             const SizedBox(height: 8),
-            Text('This will install the key for ADB authentication.', style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant)),
+            Text(
+              'This will install the key for ADB authentication.',
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
+            ),
           ],
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.of(context).pop(), child: const Text('Cancel')),
-          FilledButton(onPressed: () => Navigator.of(context).pop(controller.text.trim()), child: const Text('Install')),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(context).pop(controller.text.trim()),
+            child: const Text('Install'),
+          ),
         ],
       ),
     );
@@ -111,8 +124,10 @@ class _AdbToolState extends State<AdbTool> {
     if (result != null && result.isNotEmpty) {
       setState(() => isLoading = true);
       try {
-        await widget.repository.installAdbKey(result);
-        if (mounted) context.showSuccessSnackBar('ADB key installed successfully');
+        await widget.repository.installKey(result);
+        if (mounted) {
+          context.showSuccessSnackBar('ADB key installed successfully');
+        }
       } catch (e) {
         if (mounted) context.showErrorSnackBar('Failed to install ADB key: $e');
       } finally {
@@ -124,7 +139,11 @@ class _AdbToolState extends State<AdbTool> {
   List<_StatusItem> _getStatusItems() {
     if (adbStatus == null) return [];
     return [
-      _StatusItem('Status', adbStatus!.isRunning ? 'Running' : 'Stopped', adbStatus!.isRunning ? Colors.green : Colors.orange),
+      _StatusItem(
+        'Status',
+        adbStatus!.isRunning ? 'Running' : 'Stopped',
+        adbStatus!.isRunning ? Colors.green : Colors.orange,
+      ),
       _StatusItem('Port', adbStatus!.port),
     ];
   }
@@ -132,9 +151,15 @@ class _AdbToolState extends State<AdbTool> {
   List<_ActionButton> _getActions() {
     final running = adbStatus?.isRunning == true;
     return [
-      if (!running) _ActionButton('Start', Icons.play_arrow, isLoading ? null : _startAdb),
-      if (running) _ActionButton('Stop', Icons.stop, isLoading ? null : _stopAdb),
-      _ActionButton('Install Key', Icons.vpn_key, isLoading ? null : _showAdbKeyDialog),
+      if (!running)
+        _ActionButton('Start', Icons.play_arrow, isLoading ? null : _startAdb),
+      if (running)
+        _ActionButton('Stop', Icons.stop, isLoading ? null : _stopAdb),
+      _ActionButton(
+        'Install Key',
+        Icons.vpn_key,
+        isLoading ? null : _showAdbKeyDialog,
+      ),
     ];
   }
 
@@ -148,8 +173,16 @@ class _AdbToolState extends State<AdbTool> {
           children: [
             ListTile(
               contentPadding: EdgeInsets.zero,
-              leading: Icon(Icons.developer_mode, color: Theme.of(context).colorScheme.primary),
-              title: Text('ADB', style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600)),
+              leading: Icon(
+                Icons.developer_mode,
+                color: Theme.of(context).colorScheme.primary,
+              ),
+              title: Text(
+                'ADB',
+                style: Theme.of(
+                  context,
+                ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
+              ),
               subtitle: Text('Android Debug Bridge'),
               trailing: IconButton(
                 onPressed: isLoading ? null : _loadStatus,
@@ -159,46 +192,60 @@ class _AdbToolState extends State<AdbTool> {
             ),
             if (_getStatusItems().isNotEmpty) ...[
               const SizedBox(height: 8),
-              ..._getStatusItems().map((item) => Padding(
-                padding: const EdgeInsets.symmetric(vertical: 2.0),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    SizedBox(
-                      width: 120,
-                      child: Text('${item.label}:', style: Theme.of(context).textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w600)),
-                    ),
-                    Expanded(child: item.isPath 
-                      ? GestureDetector(
-                          onTap: () {
-                            // 
-                          },
-                          child: Row(
-                            children: [
-                              Flexible(child: Text(item.value, style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Theme.of(context).colorScheme.primary, fontWeight: FontWeight.w500), overflow: TextOverflow.ellipsis)),
-                              const SizedBox(width: 6),
-                              Icon(Icons.copy, size: 16, color: Theme.of(context).colorScheme.primary),
-                            ],
-                          ),
-                        )
-                      : Text(item.value, style: Theme.of(context).textTheme.bodySmall?.copyWith(color: item.color ?? Theme.of(context).colorScheme.onSurface, fontWeight: FontWeight.w500))
-                    ),
-                  ],
+              ..._getStatusItems().map(
+                (item) => Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 2.0),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      SizedBox(
+                        width: 120,
+                        child: Text(
+                          '${item.label}:',
+                          style: Theme.of(context).textTheme.bodySmall
+                              ?.copyWith(fontWeight: FontWeight.w600),
+                        ),
+                      ),
+                      Expanded(
+                        child: Text(
+                          item.value,
+                          style: Theme.of(context).textTheme.bodySmall
+                              ?.copyWith(
+                                color:
+                                    item.color ??
+                                    Theme.of(context).colorScheme.onSurface,
+                                fontWeight: FontWeight.w500,
+                              ),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
-              )),
+              ),
               const SizedBox(height: 16),
             ],
             if (_getActions().isNotEmpty)
               Wrap(
                 spacing: 8,
                 runSpacing: 8,
-                children: _getActions().map((action) => ActionChip(
-                  avatar: Icon(action.icon, size: 18),
-                  label: Text(action.label),
-                  onPressed: action.onPressed,
-                  backgroundColor: Theme.of(context).colorScheme.secondaryContainer,
-                  labelStyle: TextStyle(color: Theme.of(context).colorScheme.onSecondaryContainer, fontSize: 12),
-                )).toList(),
+                children: _getActions()
+                    .map(
+                      (action) => ActionChip(
+                        avatar: Icon(action.icon, size: 18),
+                        label: Text(action.label),
+                        onPressed: action.onPressed,
+                        backgroundColor: Theme.of(
+                          context,
+                        ).colorScheme.secondaryContainer,
+                        labelStyle: TextStyle(
+                          color: Theme.of(
+                            context,
+                          ).colorScheme.onSecondaryContainer,
+                          fontSize: 12,
+                        ),
+                      ),
+                    )
+                    .toList(),
               ),
           ],
         ),
