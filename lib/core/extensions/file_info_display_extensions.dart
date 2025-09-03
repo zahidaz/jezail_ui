@@ -3,10 +3,17 @@ import 'package:flutter/material.dart';
 import 'package:mime/mime.dart';
 
 extension FileInfoFileTypeDisplay on FileInfo {
+  static final Map<String, IconData> _iconCache = {};
+  
   IconData get displayIcon {
     if (isDirectory) return Icons.folder;
     if (isSymlink) return Icons.link;
 
+    final cacheKey = '$path-icon';
+    return _iconCache[cacheKey] ??= _computeDisplayIcon();
+  }
+  
+  IconData _computeDisplayIcon() {
     final mimeType = lookupMimeType(displayName) ?? '';
     final extension = displayName.toLowerCase();
 
@@ -64,10 +71,17 @@ extension FileInfoFileTypeDisplay on FileInfo {
     return Icons.insert_drive_file;
   }
 
+  static final Map<String, String> _typeDescriptionCache = {};
+  
   String get fileTypeDescription {
     if (isDirectory) return 'Directory';
     if (isSymlink) return 'Symbolic Link';
 
+    final cacheKey = '$path-desc';
+    return _typeDescriptionCache[cacheKey] ??= _computeFileTypeDescription();
+  }
+  
+  String _computeFileTypeDescription() {
     final mimeType = lookupMimeType(displayName) ?? '';
     final extension = displayName.toLowerCase();
 

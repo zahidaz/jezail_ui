@@ -14,7 +14,7 @@ class FileInfo {
   final FileType type;
   final String? mimeType;
 
-  const FileInfo({
+  FileInfo({
     required this.name,
     required this.path,
     required this.displayName,
@@ -130,7 +130,7 @@ class FileInfo {
   bool get isFile => type == FileType.file;
   bool get isRegularFile => type == FileType.file && !isSymlink;
 
-  String get sizeFormatted {
+  String _computeSizeFormatted() {
     if (size < 1024) return '${size}B';
     if (size < 1024 * 1024) return '${(size / 1024).toStringAsFixed(1)}KB';
     if (size < 1024 * 1024 * 1024) {
@@ -139,8 +139,13 @@ class FileInfo {
     return '${(size / (1024 * 1024 * 1024)).toStringAsFixed(1)}GB';
   }
 
+  FilePermissions? _cachedPermissions;
   FilePermissions get parsedPermissions =>
-      FilePermissions.fromString(permissions);
+      _cachedPermissions ??= FilePermissions.fromString(permissions);
+
+  String? _cachedSizeFormatted;
+  String get sizeFormatted =>
+      _cachedSizeFormatted ??= _computeSizeFormatted();
 
   bool get isLikelyTextFile {
     if (isDirectory) return false;
@@ -162,6 +167,16 @@ class FileInfo {
     'type': type.name,
     'mimeType': mimeType,
   };
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is FileInfo &&
+          runtimeType == other.runtimeType &&
+          path == other.path;
+
+  @override
+  int get hashCode => path.hashCode;
 }
 
 

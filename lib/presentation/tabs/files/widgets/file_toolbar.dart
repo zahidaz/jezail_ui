@@ -1,6 +1,5 @@
 import 'package:jezail_ui/models/files/file_info.dart';
 import 'package:flutter/material.dart';
-import 'package:jezail_ui/core/enums/file_enums.dart';
 
 final class FileToolbar extends StatefulWidget {
   const FileToolbar({
@@ -9,14 +8,12 @@ final class FileToolbar extends StatefulWidget {
     required this.filteredFiles,
     required this.currentPath,
     required this.selectedFiles,
-    required this.viewMode,
     required this.canNavigateUp,
     required this.onNavigateUp,
     required this.onRefresh,
     required this.onCreateFolder,
     required this.onCreateFile,
     required this.onDelete,
-    required this.onViewModeChanged,
     required this.onUpload,
     required this.onFilterChanged,
     this.onDownload,
@@ -26,14 +23,12 @@ final class FileToolbar extends StatefulWidget {
   final List<FileInfo> filteredFiles;
   final String currentPath;
   final Set<FileInfo> selectedFiles;
-  final FileViewMode viewMode;
   final bool canNavigateUp;
   final VoidCallback onNavigateUp;
   final VoidCallback onRefresh;
   final VoidCallback onCreateFolder;
   final VoidCallback onCreateFile;
   final VoidCallback onDelete;
-  final void Function(FileViewMode mode) onViewModeChanged;
   final VoidCallback onUpload;
   final void Function(String filter) onFilterChanged;
   final VoidCallback? onDownload;
@@ -46,80 +41,93 @@ final class _FileToolbarState extends State<FileToolbar> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final cs = theme.colorScheme;
 
-    return Card(
-      margin: EdgeInsets.zero,
-      child: Column(
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      decoration: BoxDecoration(
+        color: cs.surface,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: cs.outline.withAlpha(25)),
+      ),
+      child: Row(
         children: [
-          Padding(
-            padding: const EdgeInsets.all(16),
-            child: Row(
-              children: [
-                _buildNavigationSection(),
-                const SizedBox(width: 16),
-                _buildActionSection(),
-                const Spacer(),
-                _buildStatusSection(theme),
-                const SizedBox(width: 16),
-                _buildViewModeSelector(),
-              ],
-            ),
-          ),
+          _buildNavigationSection(),
+          const SizedBox(width: 16),
+          _buildActionSection(),
+          const Spacer(),
+          _buildStatusSection(theme),
         ],
       ),
     );
   }
 
   Widget _buildNavigationSection() {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        IconButton.filledTonal(
-          onPressed: widget.canNavigateUp ? widget.onNavigateUp : null,
-          icon: const Icon(Icons.arrow_back),
-          tooltip: 'Navigate back',
-        ),
-        const SizedBox(width: 8),
-        IconButton.outlined(
-          onPressed: widget.onRefresh,
-          icon: const Icon(Icons.refresh),
-          tooltip: 'Refresh (F5)',
-        ),
-      ],
+    final cs = Theme.of(context).colorScheme;
+    return Container(
+      decoration: BoxDecoration(
+        color: widget.canNavigateUp ? cs.primary.withAlpha(25) : cs.surfaceContainerHighest.withAlpha(25),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: IconButton(
+        onPressed: widget.canNavigateUp ? widget.onNavigateUp : null,
+        icon: Icon(Icons.arrow_back, size: 18, color: widget.canNavigateUp ? cs.primary : cs.onSurfaceVariant),
+        tooltip: 'Navigate back',
+        padding: const EdgeInsets.all(8),
+      ),
     );
   }
 
   Widget _buildActionSection() {
     return Wrap(
-      spacing: 8,
+      spacing: 6,
+      runSpacing: 6,
       children: [
-        IconButton.filledTonal(
+        ActionChip(
+          label: const Text('Refresh', style: TextStyle(fontSize: 11)),
+          onPressed: widget.onRefresh,
+          avatar: const Icon(Icons.refresh, size: 14),
+          materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+          tooltip: 'Refresh (F5)',
+        ),
+        ActionChip(
+          label: const Text('Folder', style: TextStyle(fontSize: 11)),
           onPressed: widget.onCreateFolder,
-          icon: const Icon(Icons.create_new_folder),
+          avatar: const Icon(Icons.create_new_folder, size: 14),
+          materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
           tooltip: 'Create folder',
         ),
-        IconButton.filledTonal(
+        ActionChip(
+          label: const Text('File', style: TextStyle(fontSize: 11)),
           onPressed: widget.onCreateFile,
-          icon: const Icon(Icons.note_add),
+          avatar: const Icon(Icons.note_add, size: 14),
+          materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
           tooltip: 'Create file',
         ),
-        IconButton.filledTonal(
+        ActionChip(
+          label: const Text('Upload', style: TextStyle(fontSize: 11)),
           onPressed: widget.onUpload,
-          icon: const Icon(Icons.upload),
+          avatar: const Icon(Icons.upload, size: 14),
+          materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
           tooltip: 'Upload files',
         ),
         if (widget.onDownload != null && widget.selectedFiles.isNotEmpty)
-          IconButton.filledTonal(
+          ActionChip(
+            label: const Text('Download', style: TextStyle(fontSize: 11)),
             onPressed: widget.onDownload,
-            icon: const Icon(Icons.download),
+            avatar: const Icon(Icons.download, size: 14),
+            materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
             tooltip: 'Download selected files',
           ),
         if (widget.selectedFiles.isNotEmpty)
-          FilledButton.tonalIcon(
+          ActionChip(
+            label: Text('Delete (${widget.selectedFiles.length})', style: const TextStyle(fontSize: 11, color: Colors.red)),
             onPressed: widget.onDelete,
-            icon: const Icon(Icons.delete),
-            label: Text('Delete (${widget.selectedFiles.length})'),
-            style: FilledButton.styleFrom(foregroundColor: Colors.red),
+            avatar: const Icon(Icons.delete, size: 14, color: Colors.red),
+            materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+            backgroundColor: Colors.red.withAlpha(25),
+            tooltip: 'Delete selected files',
           ),
       ],
     );
@@ -153,27 +161,4 @@ final class _FileToolbarState extends State<FileToolbar> {
     );
   }
 
-  Widget _buildViewModeSelector() {
-    return SegmentedButton<FileViewMode>(
-      segments: const [
-        ButtonSegment<FileViewMode>(
-          value: FileViewMode.list,
-          icon: Icon(Icons.list),
-          tooltip: 'List view',
-        ),
-        ButtonSegment<FileViewMode>(
-          value: FileViewMode.grid,
-          icon: Icon(Icons.grid_view),
-          tooltip: 'Grid view',
-        ),
-      ],
-      selected: {widget.viewMode},
-      onSelectionChanged: (Set<FileViewMode> newSelection) {
-        if (newSelection.isNotEmpty) {
-          widget.onViewModeChanged(newSelection.first);
-        }
-      },
-      showSelectedIcon: false,
-    );
-  }
 }

@@ -8,7 +8,6 @@ final class FileExplorerViewState {
     this.filesResult = const Loading<List<FileInfo>>(),
     this.currentPath = '/data/local/tmp',
     this.selectedFiles = const <FileInfo>{},
-    this.viewMode = FileViewMode.list,
     this.sortField = FileSortField.name,
     this.sortAscending = true,
   });
@@ -16,7 +15,6 @@ final class FileExplorerViewState {
   final FileOperationResult<List<FileInfo>> filesResult;
   final String currentPath;
   final Set<FileInfo> selectedFiles;
-  final FileViewMode viewMode;
   final FileSortField sortField;
   final bool sortAscending;
 
@@ -24,8 +22,6 @@ final class FileExplorerViewState {
   bool get isLoading => filesResult.isLoading;
   String? get error => filesResult.errorOrNull;
   bool get hasError => filesResult.isError;
-  bool get isGridView => viewMode == FileViewMode.grid;
-  
   bool get canNavigateUp => 
       currentPath != '/' && 
       currentPath != '/data/local/tmp';
@@ -34,7 +30,6 @@ final class FileExplorerViewState {
     FileOperationResult<List<FileInfo>>? filesResult,
     String? currentPath,
     Set<FileInfo>? selectedFiles,
-    FileViewMode? viewMode,
     FileSortField? sortField,
     bool? sortAscending,
   }) {
@@ -42,20 +37,27 @@ final class FileExplorerViewState {
       filesResult: filesResult ?? this.filesResult,
       currentPath: currentPath ?? this.currentPath,
       selectedFiles: selectedFiles ?? this.selectedFiles,
-      viewMode: viewMode ?? this.viewMode,
       sortField: sortField ?? this.sortField,
       sortAscending: sortAscending ?? this.sortAscending,
     );
   }
 
   FileExplorerViewState toggleSelection(FileInfo file) {
-    final newSelection = Set<FileInfo>.from(selectedFiles);
-    if (newSelection.contains(file)) {
-      newSelection.remove(file);
+    if (selectedFiles.contains(file)) {
+      if (selectedFiles.length == 1) {
+        return copyWith(selectedFiles: <FileInfo>{});
+      } else {
+        final newSelection = Set<FileInfo>.from(selectedFiles)..remove(file);
+        return copyWith(selectedFiles: newSelection);
+      }
     } else {
-      newSelection.add(file);
+      if (selectedFiles.isEmpty) {
+        return copyWith(selectedFiles: {file});
+      } else {
+        final newSelection = Set<FileInfo>.from(selectedFiles)..add(file);
+        return copyWith(selectedFiles: newSelection);
+      }
     }
-    return copyWith(selectedFiles: newSelection);
   }
 
   FileExplorerViewState clearSelection() {
@@ -66,13 +68,6 @@ final class FileExplorerViewState {
     return copyWith(selectedFiles: files.toSet());
   }
 
-  FileExplorerViewState toggleViewMode() {
-    return copyWith(
-      viewMode: viewMode == FileViewMode.list 
-        ? FileViewMode.grid 
-        : FileViewMode.list
-    );
-  }
 
   FileExplorerViewState setSortField(FileSortField field) {
     final ascending = sortField == field ? !sortAscending : true;
@@ -128,7 +123,6 @@ final class FileExplorerViewState {
           filesResult == other.filesResult &&
           currentPath == other.currentPath &&
           setEquals(selectedFiles, other.selectedFiles) &&
-          viewMode == other.viewMode &&
           sortField == other.sortField &&
           sortAscending == other.sortAscending;
 
@@ -137,7 +131,6 @@ final class FileExplorerViewState {
         filesResult,
         currentPath,
         selectedFiles,
-        viewMode,
         sortField,
         sortAscending,
       );

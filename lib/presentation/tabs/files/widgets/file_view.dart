@@ -3,17 +3,17 @@ import 'package:jezail_ui/core/extensions/file_info_display_extensions.dart';
 import 'package:flutter/material.dart';
 import 'package:jezail_ui/repositories/files_repository.dart';
 import 'package:jezail_ui/core/enums/file_enums.dart';
-import 'package:jezail_ui/presentation/tabs/files/dialogs/properties/file_properties_dialog.dart';
 import 'package:jezail_ui/presentation/tabs/files/widgets/context_menu.dart';
+import 'package:jezail_ui/presentation/tabs/files/dialogs/file_ownership_dialog.dart';
+import 'package:jezail_ui/presentation/tabs/files/dialogs/file_permissions_dialog.dart';
 
-final class FileView extends StatelessWidget {
+final class FileView extends StatefulWidget {
   const FileView({
     super.key,
     required this.files,
     required this.selectedFiles,
     required this.onFileSelect,
     required this.onFileActivate,
-    required this.viewMode,
     this.sortField,
     this.sortAscending,
     this.onSort,
@@ -22,13 +22,14 @@ final class FileView extends StatelessWidget {
     this.onChanged,
     this.onRename,
     this.onDownload,
+    this.isMultiSelectMode = false,
+    this.onMultiSelectModeChanged,
   });
 
   final List<FileInfo> files;
   final Set<FileInfo> selectedFiles;
   final void Function(FileInfo file, bool selected) onFileSelect;
   final void Function(FileInfo file) onFileActivate;
-  final FileViewMode viewMode;
   final FileSortField? sortField;
   final bool? sortAscending;
   final void Function(FileSortField field)? onSort;
@@ -37,27 +38,68 @@ final class FileView extends StatelessWidget {
   final VoidCallback? onChanged;
   final Future<void> Function(FileInfo file)? onRename;
   final Future<void> Function(FileInfo file)? onDownload;
+  final bool isMultiSelectMode;
+  final VoidCallback? onMultiSelectModeChanged;
+
+  @override
+  State<FileView> createState() => _FileViewState();
+}
+
+final class _FileViewState extends State<FileView> {
+  FileInfo? _contextMenuFile;
+
+  List<FileInfo> get files => widget.files;
+  Set<FileInfo> get selectedFiles => widget.selectedFiles;
+  void Function(FileInfo file, bool selected) get onFileSelect => widget.onFileSelect;
+  void Function(FileInfo file) get onFileActivate => widget.onFileActivate;
+  FileSortField? get sortField => widget.sortField;
+  bool? get sortAscending => widget.sortAscending;
+  void Function(FileSortField field)? get onSort => widget.onSort;
+  FileRepository? get repository => widget.repository;
+  String? get currentPath => widget.currentPath;
+  VoidCallback? get onChanged => widget.onChanged;
+  Future<void> Function(FileInfo file)? get onRename => widget.onRename;
+  Future<void> Function(FileInfo file)? get onDownload => widget.onDownload;
+  bool get isMultiSelectMode => widget.isMultiSelectMode;
+  VoidCallback? get onMultiSelectModeChanged => widget.onMultiSelectModeChanged;
+
+  late Map<String, bool> _selectionMap;
 
   @override
   Widget build(BuildContext context) {
-    return switch (viewMode) {
-      FileViewMode.list => _buildListView(context),
-      FileViewMode.grid => _buildGridView(context),
+    _selectionMap = {
+      for (final file in selectedFiles) file.path: true,
     };
+    
+    return _buildListView(context);
   }
 
   Widget _buildListView(BuildContext context) {
     final theme = Theme.of(context);
+    final cs = theme.colorScheme;
     
-    return Card(
-      margin: EdgeInsets.zero,
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+      decoration: BoxDecoration(
+        color: cs.surface,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: cs.outline.withAlpha(25)),
+      ),
       child: Column(
         children: [
           if (onSort != null) _buildTableHeader(theme),
           Expanded(
             child: ListView.builder(
               itemCount: files.length,
-              itemBuilder: (context, index) => _buildFileListItem(context, files[index]),
+              itemExtent: 48.0,
+              cacheExtent: 1000,
+              itemBuilder: (context, index) {
+                final file = files[index];
+                return RepaintBoundary(
+                  key: ValueKey(file.path),
+                  child: _buildFileListItem(context, file, index),
+                );
+              },
             ),
           ),
         ],
@@ -65,46 +107,70 @@ final class FileView extends StatelessWidget {
     );
   }
 
-  Widget _buildGridView(BuildContext context) {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final crossAxisCount = _calculateCrossAxisCount(constraints.maxWidth);
-        
-        return GridView.builder(
-          padding: const EdgeInsets.all(16.0),
-          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: crossAxisCount,
-            childAspectRatio: 0.85,
-            crossAxisSpacing: 16.0,
-            mainAxisSpacing: 16.0,
-          ),
-          itemCount: files.length,
-          itemBuilder: (context, index) => _buildFileGridItem(context, files[index]),
-        );
-      },
-    );
-  }
 
   Widget _buildTableHeader(ThemeData theme) {
     return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 0),
       decoration: BoxDecoration(
-        color: theme.colorScheme.surfaceContainerHighest,
-        border: Border(bottom: BorderSide(color: theme.dividerColor)),
+        color: theme.colorScheme.surfaceContainerHigh,
+        border: Border(bottom: BorderSide(color: theme.colorScheme.outline.withAlpha(25))),
+        borderRadius: const BorderRadius.only(
+          topLeft: Radius.circular(8),
+          topRight: Radius.circular(8),
+        ),
       ),
       child: Row(
         children: [
-          const SizedBox(width: 56),
-          _buildHeaderCell('Name', FileSortField.name, flex: 3),
-          _buildHeaderCell('Size', FileSortField.size),
-          _buildHeaderCell('Type', FileSortField.type),
-          _buildHeaderCell('Modified', FileSortField.modified, flex: 2),
-          _buildHeaderCell('Permissions', FileSortField.permissions),
+          if (isMultiSelectMode) 
+            _buildExitMultiSelectButton(theme) 
+          else 
+            _buildMultiSelectToggle(theme),
+          _buildHeaderCell('Name', FileSortField.name, flex: 3, icon: Icons.label),
+          _buildHeaderCell('Size', FileSortField.size, icon: Icons.storage),
+          _buildHeaderCell('Owner', FileSortField.permissions, icon: Icons.person),
+          _buildHeaderCell('Permissions', FileSortField.permissions, icon: Icons.lock),
+          _buildHeaderCell('Modified', FileSortField.modified, flex: 1, icon: Icons.schedule),
         ],
       ),
     );
   }
 
-  Widget _buildHeaderCell(String title, FileSortField field, {int flex = 1}) {
+  Widget _buildMultiSelectToggle(ThemeData theme) {
+    return SizedBox(
+      width: 40,
+      child: IconButton(
+        onPressed: onMultiSelectModeChanged,
+        icon: Icon(
+          Icons.checklist,
+          size: 16,
+          color: theme.colorScheme.onSurfaceVariant,
+        ),
+        tooltip: 'Enable multi-select mode',
+        visualDensity: VisualDensity.compact,
+      ),
+    );
+  }
+
+  Widget _buildExitMultiSelectButton(ThemeData theme) {
+    return SizedBox(
+      width: 40,
+      child: IconButton(
+        onPressed: onMultiSelectModeChanged,
+        icon: Icon(
+          Icons.close,
+          size: 16,
+          color: theme.colorScheme.primary,
+        ),
+        tooltip: 'Exit multi-select mode',
+        visualDensity: VisualDensity.compact,
+        style: IconButton.styleFrom(
+          backgroundColor: theme.colorScheme.primaryContainer.withAlpha(128),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildHeaderCell(String title, FileSortField field, {int flex = 1, IconData? icon}) {
     final isActive = sortField == field;
     
     return Expanded(
@@ -112,10 +178,14 @@ final class FileView extends StatelessWidget {
       child: InkWell(
         onTap: () => onSort?.call(field),
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 16),
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
+              if (icon != null) ...[
+                Icon(icon, size: 14),
+                const SizedBox(width: 4),
+              ],
               Text(
                 title,
                 style: TextStyle(
@@ -137,32 +207,52 @@ final class FileView extends StatelessWidget {
     );
   }
 
-  Widget _buildFileListItem(BuildContext context, FileInfo file) {
+  Widget _buildFileListItem(BuildContext context, FileInfo file, int index) {
     final theme = Theme.of(context);
-    final isSelected = selectedFiles.contains(file);
+    final isSelected = _selectionMap[file.path] == true;
+    final isEvenRow = index % 2 == 0;
+    final isContextMenuActive = _contextMenuFile == file;
     
-    return Material(
-      color: isSelected ? theme.colorScheme.primaryContainer : null,
+    Color? backgroundColor;
+    if (isSelected) {
+      backgroundColor = theme.colorScheme.primaryContainer;
+    } else if (!isEvenRow) {
+      backgroundColor = theme.colorScheme.surfaceContainerHighest.withAlpha(60);
+    }
+    
+    return Container(
+      decoration: BoxDecoration(
+        color: backgroundColor,
+        border: isContextMenuActive 
+            ? Border.all(
+                color: theme.colorScheme.outline.withAlpha(128),
+                width: 1,
+              )
+            : null,
+      ),
       child: _buildFileInteractiveWrapper(
         context,
         file,
+        isSelected,
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
           child: Row(
             children: [
-              Checkbox(
-                value: isSelected,
-                onChanged: (selected) => onFileSelect(file, selected ?? false),
-                visualDensity: VisualDensity.compact,
-              ),
-              const SizedBox(width: 8),
+              if (isMultiSelectMode) ...[
+                Checkbox(
+                  value: isSelected,
+                  onChanged: (selected) => onFileSelect(file, selected ?? false),
+                  visualDensity: VisualDensity.compact,
+                ),
+                const SizedBox(width: 8),
+              ] else const SizedBox(width: 16),
               Icon(file.displayIcon, size: 20, color: _getFileIconColor(theme, file)),
               const SizedBox(width: 8),
               _buildFileNameCell(theme, file, flex: 3),
               _buildSizeCell(theme, file),
-              _buildTypeCell(theme, file),
-              _buildModifiedCell(theme, file, flex: 2),
+              _buildOwnerCell(context, theme, file),
               _buildPermissionsCell(context, theme, file),
+              _buildModifiedCell(theme, file, flex: 1),
             ],
           ),
         ),
@@ -170,63 +260,19 @@ final class FileView extends StatelessWidget {
     );
   }
 
-  Widget _buildFileGridItem(BuildContext context, FileInfo file) {
-    final theme = Theme.of(context);
-    final isSelected = selectedFiles.contains(file);
-    
-    return Card(
-      elevation: isSelected ? 4.0 : 1.0,
-      color: isSelected ? theme.colorScheme.primaryContainer : null,
-      child: _buildFileInteractiveWrapper(
-        context,
-        file,
-        child: Padding(
-          padding: const EdgeInsets.all(12),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Expanded(
-                flex: 2,
-                child: _buildGridIcon(theme, file, isSelected),
-              ),
-              const SizedBox(height: 8),
-              Expanded(child: _buildGridFileName(theme, file)),
-              if (file.isSymlink) ...[
-                const SizedBox(height: 4),
-                _buildSymlinkIndicator(theme),
-              ],
-              if (isSelected) ...[
-                const SizedBox(height: 4),
-                _buildSelectionIndicator(theme),
-              ],
-              if (_hasPropertiesAccess()) ...[
-                const SizedBox(height: 4),
-                _buildInfoButton(context, file),
-              ],
-            ],
-          ),
-        ),
-      ),
-    );
-  }
 
   Widget _buildFileInteractiveWrapper(
     BuildContext context,
-    FileInfo file, {
+    FileInfo file,
+    bool isCurrentlySelected, {
     required Widget child,
   }) {
-    return Listener(
-      onPointerDown: (event) {
-        if (event.buttons == 2) {
-          _showContextMenu(context, TapDownDetails(globalPosition: event.position), file);
-        }
-      },
-      child: GestureDetector(
-        onTap: () => onFileSelect(file, !selectedFiles.contains(file)),
-        onDoubleTap: () => onFileActivate(file),
-        behavior: HitTestBehavior.opaque,
-        child: child,
-      ),
+    return GestureDetector(
+      onTap: () => onFileSelect(file, !isCurrentlySelected),
+      onDoubleTap: () => onFileActivate(file),
+      onSecondaryTapDown: (details) => _showContextMenu(context, details, file),
+      behavior: HitTestBehavior.opaque,
+      child: child,
     );
   }
 
@@ -262,15 +308,28 @@ final class FileView extends StatelessWidget {
     );
   }
 
-  Widget _buildTypeCell(ThemeData theme, FileInfo file) {
+  Widget _buildOwnerCell(BuildContext context, ThemeData theme, FileInfo file) {
     return Expanded(
-      child: Chip(
-        label: Text(file.fileTypeDescription, style: theme.textTheme.labelSmall),
-        visualDensity: VisualDensity.compact,
-        backgroundColor: _getTypeColor(theme, file),
+      child: MouseRegion(
+        cursor: SystemMouseCursors.click,
+        child: InkWell(
+          onTap: () => _editOwnership(context, file),
+          borderRadius: BorderRadius.circular(4),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            child: Text(
+              _formatOwnerGroup(file),
+              style: theme.textTheme.bodySmall?.copyWith(
+                fontFamily: 'monospace',
+                color: theme.colorScheme.primary,
+              ),
+            ),
+          ),
+        ),
       ),
     );
   }
+
 
   Widget _buildModifiedCell(ThemeData theme, FileInfo file, {int flex = 1}) {
     return Expanded(
@@ -281,105 +340,28 @@ final class FileView extends StatelessWidget {
 
   Widget _buildPermissionsCell(BuildContext context, ThemeData theme, FileInfo file) {
     return Expanded(
-      child: Row(
-        children: [
-          Expanded(
+      child: MouseRegion(
+        cursor: SystemMouseCursors.click,
+        child: InkWell(
+          onTap: () => _editPermissions(context, file),
+          borderRadius: BorderRadius.circular(4),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
             child: Text(
               file.permissions,
-              style: theme.textTheme.bodySmall?.copyWith(fontFamily: 'monospace'),
+              style: theme.textTheme.bodySmall?.copyWith(
+                fontFamily: 'monospace',
+                color: theme.colorScheme.primary,
+              ),
             ),
           ),
-          if (_hasPropertiesAccess())
-            IconButton(
-              icon: const Icon(Icons.info, size: 16),
-              onPressed: () => _showPropertiesDialog(context, file),
-              tooltip: 'Properties',
-              visualDensity: VisualDensity.compact,
-              padding: EdgeInsets.zero,
-            ),
-        ],
+        ),
       ),
     );
   }
 
-  Widget _buildGridIcon(ThemeData theme, FileInfo file, bool isSelected) {
-    return Badge(
-      isLabelVisible: !file.isDirectory && file.size > 1024 * 1024,
-      label: Text(_getSizeBadge(file)),
-      child: Icon(
-        file.displayIcon,
-        size: 48,
-        color: _getFileIconColor(theme, file),
-      ),
-    );
-  }
 
-  Widget _buildGridFileName(ThemeData theme, FileInfo file) {
-    return Text(
-      file.displayName,
-      textAlign: TextAlign.center,
-      maxLines: 2,
-      overflow: TextOverflow.ellipsis,
-      style: theme.textTheme.bodySmall?.copyWith(
-        fontWeight: file.isDirectory ? FontWeight.w500 : FontWeight.normal,
-        height: 1.2,
-      ),
-    );
-  }
 
-  Widget _buildSymlinkIndicator(ThemeData theme) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-      decoration: BoxDecoration(
-        color: theme.colorScheme.secondaryContainer,
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(Icons.link, size: 12, color: theme.colorScheme.onSecondaryContainer),
-          const SizedBox(width: 2),
-          Text(
-            'Link',
-            style: theme.textTheme.labelSmall?.copyWith(
-              color: theme.colorScheme.onSecondaryContainer,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildSelectionIndicator(ThemeData theme) {
-    return Container(
-      padding: const EdgeInsets.all(2),
-      decoration: BoxDecoration(
-        color: theme.colorScheme.primary,
-        shape: BoxShape.circle,
-      ),
-      child: Icon(Icons.check, size: 12, color: theme.colorScheme.onPrimary),
-    );
-  }
-
-  Widget _buildInfoButton(BuildContext context, FileInfo file) {
-    return SizedBox(
-      width: 32,
-      height: 20,
-      child: IconButton(
-        icon: const Icon(Icons.info, size: 12),
-        onPressed: () => _showPropertiesDialog(context, file),
-        tooltip: 'Properties',
-        visualDensity: VisualDensity.compact,
-        padding: EdgeInsets.zero,
-      ),
-    );
-  }
-
-  int _calculateCrossAxisCount(double width) {
-    const minCardWidth = 120.0;
-    final count = (width - 32.0) ~/ (minCardWidth + 16.0);
-    return (count < 2) ? 2 : (count > 8) ? 8 : count;
-  }
 
   Color? _getFileIconColor(ThemeData theme, FileInfo file) {
     if (file.isDirectory) return theme.colorScheme.primary;
@@ -387,36 +369,73 @@ final class FileView extends StatelessWidget {
     return theme.colorScheme.onSurface;
   }
 
-  Color? _getTypeColor(ThemeData theme, FileInfo file) {
-    if (file.isDirectory) return theme.colorScheme.primaryContainer;
-    if (file.isSymlink) return theme.colorScheme.secondaryContainer;
-    return theme.colorScheme.surfaceContainerHighest;
+
+
+  String _formatOwnerGroup(FileInfo file) {
+    if (file.owner.isEmpty && file.group.isEmpty) return '';
+    if (file.owner.isEmpty) return file.group;
+    if (file.group.isEmpty) return file.owner;
+    return '${file.owner}:${file.group}';
   }
 
-  String _getSizeBadge(FileInfo file) {
-    if (file.size > 1024 * 1024 * 1024) return 'GB';
-    if (file.size > 1024 * 1024) return 'MB';
-    return '';
-  }
-
-  bool _hasPropertiesAccess() => repository != null && currentPath != null;
-
-  void _showPropertiesDialog(BuildContext context, FileInfo file) {
-    if (!_hasPropertiesAccess() || onChanged == null) return;
-    
+  void _editOwnership(BuildContext context, FileInfo file) {
     showDialog<void>(
       context: context,
-      builder: (context) => FilePropertiesDialog(
+      builder: (context) => FileOwnershipDialog(
         file: file,
-        repository: repository!,
-        currentPath: currentPath!,
-        onChanged: onChanged!,
+        onSave: (owner, group) async {
+          if (repository == null || currentPath == null) return;
+          try {
+            final filePath = currentPath!.endsWith('/') ? '$currentPath${file.name}' : '$currentPath/${file.name}';
+            if (owner != file.owner) {
+              await repository!.changeOwner(filePath, owner);
+            }
+            if (group != file.group) {
+              await repository!.changeGroup(filePath, group);
+            }
+            onChanged?.call();
+          } catch (e) {
+            if (context.mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text('Failed to update ownership: $e'), backgroundColor: Theme.of(context).colorScheme.error),
+              );
+            }
+          }
+        },
       ),
     );
   }
 
+  void _editPermissions(BuildContext context, FileInfo file) {
+    showDialog<void>(
+      context: context,
+      builder: (context) => FilePermissionsDialog(
+        file: file,
+        onSave: (permissions) async {
+          if (repository == null || currentPath == null) return;
+          try {
+            final filePath = currentPath!.endsWith('/') ? '$currentPath${file.name}' : '$currentPath/${file.name}';
+            await repository!.changePermissions(filePath, permissions);
+            onChanged?.call();
+          } catch (e) {
+            if (context.mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text('Failed to update permissions: $e'), backgroundColor: Theme.of(context).colorScheme.error),
+              );
+            }
+          }
+        },
+      ),
+    );
+  }
+
+
   void _showContextMenu(BuildContext context, TapDownDetails details, FileInfo file) {
     if (currentPath == null) return;
+    
+    setState(() {
+      _contextMenuFile = file;
+    });
     
     FileContextMenu.show(
       context,
@@ -425,7 +444,12 @@ final class FileView extends StatelessWidget {
       currentPath!,
       onDownload: onDownload,
       onRename: onRename,
-      onShowProperties: (file) => _showPropertiesDialog(context, file),
-    );
+    ).then((_) {
+      if (mounted) {
+        setState(() {
+          _contextMenuFile = null;
+        });
+      }
+    });
   }
 }

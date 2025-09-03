@@ -33,13 +33,6 @@ class _PathNavigatorState extends State<PathNavigator> {
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       child: Row(
         children: [
-          IconButton(
-            onPressed: () => _copyPath(context),
-            icon: const Icon(Icons.content_copy),
-            tooltip: 'Copy path',
-            visualDensity: VisualDensity.compact,
-          ),
-          const SizedBox(width: 8),
           Expanded(
             child: _isEditingPath 
               ? _buildPathEditor(theme)
@@ -109,6 +102,25 @@ class _PathNavigatorState extends State<PathNavigator> {
               ),
             ),
           ),
+          const SizedBox(width: 8),
+          MouseRegion(
+            cursor: SystemMouseCursors.click,
+            child: GestureDetector(
+              onTap: () => _copyPath(context),
+              child: Container(
+                padding: const EdgeInsets.all(4),
+                decoration: BoxDecoration(
+                  color: theme.colorScheme.primary.withAlpha(25),
+                  borderRadius: BorderRadius.circular(4),
+                ),
+                child: Icon(
+                  Icons.content_copy,
+                  size: 14,
+                  color: theme.colorScheme.primary,
+                ),
+              ),
+            ),
+          ),
         ],
       ),
     );
@@ -119,16 +131,19 @@ class _PathNavigatorState extends State<PathNavigator> {
   }
 
   Widget _buildClickableSegment(ThemeData theme, String text, VoidCallback onTap) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(4),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
-        child: Text(
-          text,
-          style: TextStyle(
-            color: theme.colorScheme.primary,
-            fontWeight: FontWeight.w500,
+    return MouseRegion(
+      cursor: SystemMouseCursors.click,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(4),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+          child: Text(
+            text,
+            style: TextStyle(
+              color: theme.colorScheme.primary,
+              fontWeight: FontWeight.w500,
+            ),
           ),
         ),
       ),

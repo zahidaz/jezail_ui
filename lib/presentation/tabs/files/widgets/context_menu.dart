@@ -10,14 +10,12 @@ final class FileContextMenu extends StatelessWidget {
     required this.currentPath,
     this.onDownload,
     this.onRename,
-    this.onShowProperties,
   });
 
   final FileInfo file;
   final String currentPath;
   final Future<void> Function(FileInfo file)? onDownload;
   final Future<void> Function(FileInfo file)? onRename;
-  final void Function(FileInfo file)? onShowProperties;
 
   @override
   Widget build(BuildContext context) {
@@ -31,7 +29,6 @@ final class FileContextMenu extends StatelessWidget {
     String currentPath, {
     Future<void> Function(FileInfo file)? onDownload,
     Future<void> Function(FileInfo file)? onRename,
-    void Function(FileInfo file)? onShowProperties,
   }) async {
     await showMenu<_MenuAction>(
       context: context,
@@ -93,16 +90,6 @@ final class FileContextMenu extends StatelessWidget {
             ],
           ),
         ),
-        PopupMenuItem<_MenuAction>(
-          value: _MenuAction.properties,
-          child: const Row(
-            children: [
-              Icon(Icons.info, size: 16),
-              SizedBox(width: 8),
-              Text('Properties'),
-            ],
-          ),
-        ),
       ],
     ).then((action) {
       if (action != null && context.mounted) {
@@ -113,7 +100,6 @@ final class FileContextMenu extends StatelessWidget {
           currentPath,
           onDownload: onDownload,
           onRename: onRename,
-          onShowProperties: onShowProperties,
         );
       }
     });
@@ -126,7 +112,6 @@ final class FileContextMenu extends StatelessWidget {
     String currentPath, {
     Future<void> Function(FileInfo file)? onDownload,
     Future<void> Function(FileInfo file)? onRename,
-    void Function(FileInfo file)? onShowProperties,
   }) {
     switch (action) {
       case _MenuAction.copyName:
@@ -143,9 +128,6 @@ final class FileContextMenu extends StatelessWidget {
         break;
       case _MenuAction.rename:
         onRename?.call(file);
-        break;
-      case _MenuAction.properties:
-        onShowProperties?.call(file);
         break;
     }
   }
@@ -174,5 +156,4 @@ enum _MenuAction {
   copyPermissions,
   download,
   rename,
-  properties,
 }

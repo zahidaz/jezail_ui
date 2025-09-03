@@ -88,31 +88,20 @@ class QuickAccess extends StatelessWidget {
       message: '${item.description}\nPath: ${item.path}',
       child: FilterChip(
         selected: isCurrentPath,
-        avatar: Icon(
-          item.icon,
-          size: 18,
-          color: isCurrentPath 
-              ? theme.colorScheme.onSecondaryContainer
-              : theme.colorScheme.onSurface.withValues(alpha: 0.7),
-        ),
+        onSelected: (_) {
+          if (!isCurrentPath) {
+            onNavigate(item.path);
+          }
+        },
         label: Text(
           item.name,
-          style: TextStyle(
-            fontSize: 12,
-            fontWeight: isCurrentPath ? FontWeight.w600 : FontWeight.w400,
-          ),
+          style: const TextStyle(fontSize: 12),
         ),
-        onSelected: isCurrentPath ? null : (_) => onNavigate(item.path),
-        selectedColor: theme.colorScheme.secondaryContainer,
-        backgroundColor: theme.colorScheme.surface,
-        side: BorderSide(
-          color: isCurrentPath 
-              ? theme.colorScheme.secondary
-              : theme.colorScheme.outline.withValues(alpha: 0.5),
-          width: isCurrentPath ? 2 : 1,
-        ),
-        visualDensity: VisualDensity.compact,
+        avatar: Icon(item.icon, size: 14),
+        materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
         showCheckmark: false,
+        selectedColor: theme.colorScheme.primaryContainer,
+        backgroundColor: theme.colorScheme.surface,
       ),
     );
   }

@@ -33,6 +33,7 @@ final class _FileExplorerState extends State<FileExplorer> {
   final TextEditingController _pathController = TextEditingController();
   String _filterQuery = '';
   List<FileInfo> _filteredFiles = [];
+  bool _isMultiSelectMode = false;
 
   @override
   void initState() {
@@ -50,11 +51,25 @@ final class _FileExplorerState extends State<FileExplorer> {
     super.dispose();
   }
 
+  String _lastPath = '';
+  String _lastFilterQuery = '';
+  
   void _onStateChanged() {
     final currentPath = _controller.value.currentPath;
-    _pathController.text = currentPath;
-    _updateFilteredFiles();
-    widget.onPathChanged?.call(currentPath);
+    
+    if (_pathController.text != currentPath) {
+      _pathController.text = currentPath;
+    }
+    
+    if (currentPath != _lastPath || _filterQuery != _lastFilterQuery) {
+      _updateFilteredFiles();
+      _lastPath = currentPath;
+      _lastFilterQuery = _filterQuery;
+    }
+    
+    if (currentPath != _lastPath) {
+      widget.onPathChanged?.call(currentPath);
+    }
   }
 
   void navigateToPath(String path) {
@@ -75,16 +90,12 @@ final class _FileExplorerState extends State<FileExplorer> {
                   : state.files,
               currentPath: state.currentPath,
               selectedFiles: state.selectedFiles,
-              viewMode: state.viewMode,
               canNavigateUp: state.canNavigateUp,
               onNavigateUp: _controller.navigateUp,
               onRefresh: _controller.refreshCurrentDirectory,
               onCreateFolder: _showCreateFolderDialog,
               onCreateFile: _showCreateFileDialog,
               onDelete: _deleteSelectedFiles,
-              onViewModeChanged: (mode) => setState(() {
-                _controller.value = _controller.value.copyWith(viewMode: mode);
-              }),
               onUpload: _showUploadDialog,
               onFilterChanged: _onFilterChanged,
               onDownload: _downloadSelectedFiles,
@@ -99,7 +110,11 @@ final class _FileExplorerState extends State<FileExplorer> {
               currentPath: state.currentPath,
               onNavigate: _controller.navigateToPath,
             ),
-            Expanded(child: _buildFileView(state)),
+            Expanded(
+              child: RepaintBoundary(
+                child: _buildFileView(state),
+              ),
+            ),
           ],
         );
       },
@@ -204,7 +219,6 @@ final class _FileExplorerState extends State<FileExplorer> {
     return FileView(
       files: displayFiles,
       selectedFiles: state.selectedFiles,
-      viewMode: state.viewMode,
       sortField: state.sortField,
       sortAscending: state.sortAscending,
       onFileSelect: _onFileSelect,
@@ -215,14 +229,27 @@ final class _FileExplorerState extends State<FileExplorer> {
       onChanged: _controller.refreshCurrentDirectory,
       onRename: _onRenameFile,
       onDownload: _downloadFile,
+      isMultiSelectMode: _isMultiSelectMode,
+      onMultiSelectModeChanged: () {
+        setState(() {
+          _isMultiSelectMode = !_isMultiSelectMode;
+          if (!_isMultiSelectMode) {
+            _controller.clearSelection();
+          }
+        });
+      },
     );
   }
 
   void _onFileSelect(FileInfo file, bool selected) {
-    if (selected) {
+    if (_isMultiSelectMode) {
       _controller.toggleFileSelection(file);
     } else {
-      _controller.clearSelection();
+      if (selected) {
+        _controller.selectSingleFile(file);
+      } else {
+        _controller.clearSelection();
+      }
     }
   }
 

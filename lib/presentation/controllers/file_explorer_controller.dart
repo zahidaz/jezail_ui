@@ -68,13 +68,14 @@ final class FileExplorerController extends ValueNotifier<FileExplorerViewState> 
     value = value.clearSelection();
   }
 
+  void selectSingleFile(FileInfo file) {
+    value = value.clearSelection().toggleSelection(file);
+  }
+
   void selectAll() {
     value = value.selectAll();
   }
 
-  void toggleViewMode() {
-    value = value.toggleViewMode();
-  }
 
   void setSortField(FileSortField field) {
     value = value.setSortField(field);
