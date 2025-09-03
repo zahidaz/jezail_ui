@@ -25,12 +25,18 @@ class _HeaderState extends State<Header> with TickerProviderStateMixin {
 
   Map<String, dynamic>? _info;
   Timer? _timer;
+  String? _selinuxStatus;
+  bool _selinuxLoading = false;
 
   @override
   void initState() {
     super.initState();
     _loadInfo();
-    _timer = Timer.periodic(const Duration(seconds: 30), (_) => _loadInfo());
+    _loadSelinuxStatus();
+    _timer = Timer.periodic(const Duration(seconds: 30), (_) {
+      _loadInfo();
+      _loadSelinuxStatus();
+    });
   }
 
   @override
@@ -46,6 +52,58 @@ class _HeaderState extends State<Header> with TickerProviderStateMixin {
       if (mounted) setState(() => _info = info);
     } catch (e) {
       Log.error('Failed to load device info', e);
+    }
+  }
+
+  Future<void> _loadSelinuxStatus() async {
+    if (_selinuxLoading) return;
+    setState(() => _selinuxLoading = true);
+    
+    try {
+      final result = await widget.deviceService.getSelinuxStatus();
+      if (mounted) setState(() => _selinuxStatus = result['data']?.toString());
+    } catch (e) {
+      if (mounted) setState(() => _selinuxStatus = 'Unknown');
+      Log.error('Failed to load SELinux status', e);
+    } finally {
+      if (mounted) setState(() => _selinuxLoading = false);
+    }
+  }
+
+  Future<void> _toggleSelinux() async {
+    if (_selinuxLoading || _selinuxStatus == null) return;
+    
+    setState(() => _selinuxLoading = true);
+    try {
+      final currentStatus = _selinuxStatus?.toLowerCase() ?? '';
+      final enable = !currentStatus.contains('enforcing');
+      
+      Log.info('Toggling SELinux from $currentStatus to ${enable ? "enforcing" : "permissive"}');
+      
+      if (mounted) {
+        setState(() {
+          _selinuxStatus = enable ? 'Enforcing' : 'Permissive';
+        });
+      }
+      
+      await widget.deviceService.toggleSelinux(enable);
+      
+      await Future.delayed(const Duration(milliseconds: 1000));
+      
+      await _loadSelinuxStatus();
+      
+      if (mounted) {
+        context.showSuccessSnackBar(
+          enable ? 'SELinux enabled (enforcing)' : 'SELinux disabled (permissive)'
+        );
+      }
+    } catch (e) {
+      // Revert optimistic update on error
+      await _loadSelinuxStatus();
+      if (mounted) context.showErrorSnackBar('Failed to toggle SELinux: $e');
+      Log.error('Failed to toggle SELinux', e);
+    } finally {
+      if (mounted) setState(() => _selinuxLoading = false);
     }
   }
 
@@ -92,6 +150,8 @@ class _HeaderState extends State<Header> with TickerProviderStateMixin {
                     ),
                     if (!isCompact) _badge(name),
                     const Spacer(),
+                    _selinuxWidget(),
+                    const SizedBox(width: 8),
                     _batteryWidget(battery, charging),
                     const SizedBox(width: 8),
                     if (isCompact)
@@ -125,6 +185,8 @@ class _HeaderState extends State<Header> with TickerProviderStateMixin {
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       _badge(name),
+                      const SizedBox(width: 8),
+                      _selinuxWidget(),
                       const SizedBox(width: 8),
                       _batteryWidget(battery, charging),
                     ],
@@ -188,6 +250,62 @@ class _HeaderState extends State<Header> with TickerProviderStateMixin {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _selinuxWidget() {
+    final isEnforcing = _selinuxStatus?.toLowerCase().contains('enforcing') ?? false;
+    final canToggle = _selinuxStatus != null && !_selinuxLoading;
+    
+    return Tooltip(
+      message: canToggle 
+        ? 'Click to toggle SELinux (${isEnforcing ? 'disable' : 'enable'})'
+        : 'SELinux status',
+      child: MouseRegion(
+        cursor: canToggle ? SystemMouseCursors.click : SystemMouseCursors.basic,
+        child: GestureDetector(
+          onTap: canToggle ? _toggleSelinux : null,
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: canToggle ? 0.15 : 0.1),
+              borderRadius: BorderRadius.circular(4),
+              border: canToggle ? Border.all(color: Colors.white.withValues(alpha: 0.3), width: 1) : null,
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (_selinuxLoading)
+                  const SizedBox(
+                    width: 12,
+                    height: 12,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 1.5,
+                      color: Colors.white,
+                    ),
+                  )
+                else
+                  Icon(
+                    Icons.security,
+                    color: isEnforcing ? Colors.green : Colors.orange,
+                    size: 16,
+                  ),
+                const SizedBox(width: 2),
+                Text(
+                  _selinuxStatus == null 
+                    ? 'Loading...' 
+                    : (isEnforcing ? 'Enforcing' : 'Permissive'),
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 10,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
       ),
     );
   }
