@@ -122,7 +122,7 @@ class _FileRenameDialogState extends State<FileRenameDialog> {
           onPressed: _isRenaming ? null : () => Navigator.pop(context),
           child: const Text('Cancel'),
         ),
-        ElevatedButton(
+        FilledButton(
           onPressed: _isRenaming ? null : _handleRename,
           child: _isRenaming
             ? const SizedBox(

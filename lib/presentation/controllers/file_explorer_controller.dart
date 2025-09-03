@@ -3,11 +3,11 @@ import 'dart:js_interop';
 import 'package:jezail_ui/models/files/file_info.dart';
 import 'package:flutter/foundation.dart';
 import 'package:web/web.dart' as web;
+import 'package:path/path.dart' as path;
 import 'package:jezail_ui/repositories/files_repository.dart';
 import 'package:jezail_ui/models/files/file_explorer_view_state.dart';
 import 'package:jezail_ui/models/files/file_operation_result.dart';
 import 'package:jezail_ui/core/enums/file_enums.dart';
-import 'package:jezail_ui/core/log.dart';
 
 final class FileExplorerController extends ValueNotifier<FileExplorerViewState> {
   FileExplorerController(this._repository) : super(const FileExplorerViewState()) {
@@ -44,9 +44,25 @@ final class FileExplorerController extends ValueNotifier<FileExplorerViewState> 
     await loadDirectory(value.currentPath);
   }
 
-  Future<void> navigateToPath(String path) async {
-    if (path != value.currentPath) {
-      await loadDirectory(path);
+  Future<void> navigateToPath(String targetPath) async {
+    if (targetPath != value.currentPath) {
+      try {
+        final fileInfo = await _repository.getFileInfo(targetPath);
+        
+        if (!fileInfo.isDirectory) {
+          final parentPath = path.dirname(targetPath);
+          final fileName = path.basename(targetPath);
+          
+          await loadDirectory(parentPath == '.' ? '/' : parentPath);
+          
+          await Future.delayed(const Duration(milliseconds: 100));
+          _selectFileByName(fileName);
+        } else {
+          await loadDirectory(targetPath);
+        }
+      } catch (e) {
+        await loadDirectory(targetPath);
+      }
     }
   }
 
@@ -62,6 +78,13 @@ final class FileExplorerController extends ValueNotifier<FileExplorerViewState> 
 
   void toggleFileSelection(FileInfo file) {
     value = value.toggleSelection(file);
+  }
+
+  void _selectFileByName(String fileName) {
+    final targetFile = value.files.where((file) => file.displayName == fileName).firstOrNull;
+    if (targetFile != null) {
+      value = value.clearSelection().toggleSelection(targetFile);
+    }
   }
 
   void clearSelection() {
@@ -92,16 +115,6 @@ final class FileExplorerController extends ValueNotifier<FileExplorerViewState> 
     }
   }
 
-  Future<FileOperationResult<void>> deleteFile(FileInfo file) async {
-    try {
-      final filePath = value.getChildPath(file.displayName);
-      await _repository.deleteFile(filePath);
-      await refreshCurrentDirectory();
-      return const Success(null);
-    } on Exception catch (e) {
-      return Error('Failed to delete file: ${e.toString()}', e);
-    }
-  }
 
   Future<FileOperationResult<void>> deleteSelectedFiles() async {
     try {
@@ -128,69 +141,30 @@ final class FileExplorerController extends ValueNotifier<FileExplorerViewState> 
     }
   }
 
-  Future<FileOperationResult<Uint8List>> downloadFile(FileInfo file) async {
+  Future<FileOperationResult<String>> downloadFiles(List<FileInfo> filesToDownload) async {
     try {
-      final filePath = value.getChildPath(file.displayName);
-      final data = await _repository.downloadFile(filePath);
-      return Success(data);
-    } on Exception catch (e) {
-      return Error('Failed to download file: ${e.toString()}', e);
-    }
-  }
-
-  Future<FileOperationResult<void>> downloadSelectedFiles() async {
-    try {
-      final files = value.selectedFiles.toList();
-      if (files.isEmpty) {
-        return Error('No files selected for download', null);
+      final paths = filesToDownload.map((file) => value.getChildPath(file.displayName)).toList();
+      final result = await _repository.download(paths);
+      
+      if (kIsWeb) {
+        final mimeType = result.filename.endsWith('.zip') 
+            ? 'application/zip'
+            : 'application/octet-stream';
+        
+        final blob = web.Blob([result.data.toJS].toJS, web.BlobPropertyBag(type: mimeType));
+        final url = web.URL.createObjectURL(blob);
+        
+        final anchor = web.HTMLAnchorElement()
+          ..href = url
+          ..download = result.filename;
+        anchor.click();
+        
+        web.URL.revokeObjectURL(url);
       }
       
-      if (files.length == 1) {
-        final file = files.first;
-        final filePath = value.getChildPath(file.displayName);
-        final data = await _repository.downloadFile(filePath);
-        _triggerWebDownload(data, file.displayName);
-      } else {
-        final filePaths = files
-            .map((file) => value.getChildPath(file.displayName))
-            .toList();
-        final result = await _repository.downloadFiles(filePaths);
-        final timestamp = DateTime.now().millisecondsSinceEpoch;
-        final filename = result.filename ?? 'download_$timestamp.zip';
-        
-        Log.info('Downloading ${files.length} files');
-        Log.debug('Server provided filename: ${result.filename}');
-        Log.debug('Final filename used: $filename');
-        Log.debug('Data size: ${result.data.length} bytes');
-        
-        _triggerWebDownload(result.data, filename);
-      }
-      
-      return const Success(null);
+      return Success(result.filename);
     } on Exception catch (e) {
       return Error('Failed to download files: ${e.toString()}', e);
-    }
-  }
-  
-  void _triggerWebDownload(Uint8List data, String filename) {
-    if (kIsWeb) {
-      final mimeType = filename.endsWith('.zip') 
-          ? 'application/zip'
-          : 'application/octet-stream';
-      
-      Log.debug('Creating web download: filename=$filename, mimeType=$mimeType, size=${data.length}');
-      
-      final blob = web.Blob([data.toJS].toJS, web.BlobPropertyBag(type: mimeType));
-      final url = web.URL.createObjectURL(blob);
-      
-      final anchor = web.HTMLAnchorElement()
-        ..href = url
-        ..download = filename;
-      anchor.click();
-      
-      web.URL.revokeObjectURL(url);
-      
-      Log.info('Download triggered for: $filename');
     }
   }
 

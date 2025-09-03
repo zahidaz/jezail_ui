@@ -35,7 +35,7 @@ class ApiService {
   Future<http.Response> getRaw(String endpoint, {Map<String, String>? headers}) async {
     final response = await http.get(
       Uri.parse('$baseUrl$endpoint'),
-      headers: {..._defaultHeaders, ...?headers},
+      headers: headers ?? {},
     );
     
     if (response.statusCode >= 200 && response.statusCode < 300) {

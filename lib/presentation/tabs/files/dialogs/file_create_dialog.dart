@@ -14,7 +14,7 @@ class FileCreateDialog extends StatefulWidget {
   final bool isDirectory;
   final FileRepository repository;
   final String currentPath;
-  final VoidCallback onCreated;
+  final Future<void> Function() onCreated;
 
   @override
   State<FileCreateDialog> createState() => _FileCreateDialogState();
@@ -55,8 +55,10 @@ class _FileCreateDialogState extends State<FileCreateDialog> {
       
       if (mounted) {
         Navigator.pop(context);
-        widget.onCreated();
-        context.showSuccessSnackBar('Created ${widget.isDirectory ? 'directory' : 'file'}: $name');
+        await widget.onCreated();
+        if (mounted) {
+          context.showSuccessSnackBar('Created ${widget.isDirectory ? 'directory' : 'file'}: $name');
+        }
       }
     } catch (e) {
       if (mounted) {
@@ -70,8 +72,18 @@ class _FileCreateDialogState extends State<FileCreateDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     return AlertDialog(
-      title: Text('Create ${widget.isDirectory ? 'Directory' : 'File'}'),
+      title: Row(
+        children: [
+          Icon(
+            widget.isDirectory ? Icons.folder : Icons.insert_drive_file,
+            color: theme.colorScheme.primary,
+          ),
+          const SizedBox(width: 8),
+          Text('Create ${widget.isDirectory ? 'Directory' : 'File'}'),
+        ],
+      ),
       content: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -95,7 +107,7 @@ class _FileCreateDialogState extends State<FileCreateDialog> {
                 Expanded(
                   child: Text(
                     'Directory will be created in the current location',
-                    style: TextStyle(fontSize: 12, color: Colors.grey),
+                    style: TextStyle(fontSize: 12),
                   ),
                 ),
               ],
@@ -108,7 +120,7 @@ class _FileCreateDialogState extends State<FileCreateDialog> {
           onPressed: _isCreating ? null : () => Navigator.pop(context),
           child: const Text('Cancel'),
         ),
-        ElevatedButton(
+        FilledButton(
           onPressed: _isCreating ? null : _create,
           child: _isCreating 
               ? const SizedBox(

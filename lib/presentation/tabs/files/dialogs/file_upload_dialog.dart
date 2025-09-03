@@ -13,7 +13,7 @@ class FileUploadDialog extends StatefulWidget {
 
   final FileRepository repository;
   final String currentPath;
-  final VoidCallback onUploaded;
+  final Future<void> Function() onUploaded;
 
   @override
   State<FileUploadDialog> createState() => _FileUploadDialogState();
@@ -72,8 +72,10 @@ class _FileUploadDialogState extends State<FileUploadDialog> {
 
       if (mounted) {
         Navigator.pop(context);
-        widget.onUploaded();
-        context.showSuccessSnackBar('Uploaded ${_selectedFiles.length} files');
+        await widget.onUploaded();
+        if (mounted) {
+          context.showSuccessSnackBar('Uploaded ${_selectedFiles.length} files');
+        }
       }
     } catch (e) {
       if (mounted) {
@@ -93,8 +95,15 @@ class _FileUploadDialogState extends State<FileUploadDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     return AlertDialog(
-      title: const Text('Upload Files'),
+      title: Row(
+        children: [
+          Icon(Icons.cloud_upload, color: theme.colorScheme.primary),
+          const SizedBox(width: 8),
+          const Text('Upload Files'),
+        ],
+      ),
       content: SizedBox(
         width: 500,
         height: 400,
@@ -110,7 +119,7 @@ class _FileUploadDialogState extends State<FileUploadDialog> {
                       const SizedBox(height: 16),
                       const Text('No files selected'),
                       const SizedBox(height: 16),
-                      ElevatedButton(
+                      FilledButton(
                         onPressed: _isUploading ? null : _selectFiles,
                         child: const Text('Select Files'),
                       ),
@@ -167,7 +176,7 @@ class _FileUploadDialogState extends State<FileUploadDialog> {
           onPressed: _isUploading ? null : () => Navigator.pop(context),
           child: const Text('Cancel'),
         ),
-        ElevatedButton(
+        FilledButton(
           onPressed: _selectedFiles.isEmpty || _isUploading ? null : _upload,
           child: _isUploading ? const Text('Uploading...') : const Text('Upload'),
         ),

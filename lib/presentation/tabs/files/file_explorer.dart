@@ -13,6 +13,7 @@ import 'package:jezail_ui/presentation/tabs/files/dialogs/file_upload_dialog.dar
 import 'package:jezail_ui/presentation/tabs/files/dialogs/file_preview_dialog.dart';
 import 'package:jezail_ui/presentation/tabs/files/dialogs/file_edit_dialog.dart';
 import 'package:jezail_ui/presentation/tabs/files/dialogs/file_rename_dialog.dart';
+import 'package:jezail_ui/core/extensions/snackbar_extensions.dart';
 
 final class FileExplorer extends StatefulWidget {
   const FileExplorer({
@@ -32,7 +33,6 @@ final class _FileExplorerState extends State<FileExplorer> {
   late final FileExplorerController _controller;
   final TextEditingController _pathController = TextEditingController();
   String _filterQuery = '';
-  List<FileInfo> _filteredFiles = [];
   bool _isMultiSelectMode = false;
 
   @override
@@ -52,7 +52,6 @@ final class _FileExplorerState extends State<FileExplorer> {
   }
 
   String _lastPath = '';
-  String _lastFilterQuery = '';
   
   void _onStateChanged() {
     final currentPath = _controller.value.currentPath;
@@ -61,19 +60,24 @@ final class _FileExplorerState extends State<FileExplorer> {
       _pathController.text = currentPath;
     }
     
-    if (currentPath != _lastPath || _filterQuery != _lastFilterQuery) {
-      _updateFilteredFiles();
-      _lastPath = currentPath;
-      _lastFilterQuery = _filterQuery;
-    }
-    
     if (currentPath != _lastPath) {
       widget.onPathChanged?.call(currentPath);
+      _lastPath = currentPath;
     }
   }
 
-  void navigateToPath(String path) {
-    _controller.navigateToPath(path);
+
+  List<FileInfo> _filterFiles(List<FileInfo> files) {
+    if (_filterQuery.isEmpty) return files;
+    
+    final query = _filterQuery.toLowerCase();
+    return files.where((file) {
+      return file.displayName.toLowerCase().contains(query) ||
+          file.permissions.contains(query) ||
+          file.owner.toLowerCase().contains(query) ||
+          file.group.toLowerCase().contains(query) ||
+          file.type.name.toLowerCase().contains(query);
+    }).toList();
   }
 
   @override
@@ -81,13 +85,12 @@ final class _FileExplorerState extends State<FileExplorer> {
     return ValueListenableBuilder<FileExplorerViewState>(
       valueListenable: _controller,
       builder: (context, state, child) {
+        final filteredFiles = _filterFiles(state.files);
         return Column(
           children: [
             FileToolbar(
               files: state.files,
-              filteredFiles: _filteredFiles.isNotEmpty
-                  ? _filteredFiles
-                  : state.files,
+              filteredFiles: filteredFiles,
               currentPath: state.currentPath,
               selectedFiles: state.selectedFiles,
               canNavigateUp: state.canNavigateUp,
@@ -167,9 +170,7 @@ final class _FileExplorerState extends State<FileExplorer> {
   }
 
   Widget _buildFileContent(FileExplorerViewState state) {
-    final displayFiles = _filteredFiles.isNotEmpty
-        ? _filteredFiles
-        : state.files;
+    final filteredFiles = _filterFiles(state.files);
 
     if (state.files.isEmpty) {
       return Center(
@@ -191,7 +192,7 @@ final class _FileExplorerState extends State<FileExplorer> {
       );
     }
 
-    if (displayFiles.isEmpty && _filterQuery.isNotEmpty) {
+    if (filteredFiles.isEmpty && _filterQuery.isNotEmpty) {
       return Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -217,7 +218,7 @@ final class _FileExplorerState extends State<FileExplorer> {
     }
 
     return FileView(
-      files: displayFiles,
+      files: filteredFiles,
       selectedFiles: state.selectedFiles,
       sortField: state.sortField,
       sortAscending: state.sortAscending,
@@ -264,25 +265,9 @@ final class _FileExplorerState extends State<FileExplorer> {
   void _onFilterChanged(String query) {
     setState(() {
       _filterQuery = query;
-      _updateFilteredFiles();
     });
   }
 
-  void _updateFilteredFiles() {
-    final files = _controller.value.files;
-    if (_filterQuery.isEmpty) {
-      _filteredFiles = files;
-    } else {
-      final query = _filterQuery.toLowerCase();
-      _filteredFiles = files.where((file) {
-        return file.displayName.toLowerCase().contains(query) ||
-            file.permissions.contains(query) ||
-            file.owner.toLowerCase().contains(query) ||
-            file.group.toLowerCase().contains(query) ||
-            file.type.name.toLowerCase().contains(query);
-      }).toList();
-    }
-  }
 
   void _showCreateFolderDialog() {
     showDialog<void>(
@@ -345,62 +330,35 @@ final class _FileExplorerState extends State<FileExplorer> {
   }
 
   Future<void> _downloadFile(FileInfo file) async {
-    final messenger = ScaffoldMessenger.of(context);
-
-    messenger.showSnackBar(
-      SnackBar(content: Text('Downloading ${file.displayName}...')),
-    );
-
-    final result = await _controller.downloadFile(file);
-
-    if (!mounted) return;
-
-    result.when(
-      success: (data) {
-        messenger.showSnackBar(
-          SnackBar(content: Text('Downloaded ${file.displayName}')),
-        );
-      },
-      loading: () {},
-      error: (message, exception) {
-        messenger.showSnackBar(
-          SnackBar(
-            content: Text('Download failed: $message'),
-            backgroundColor: Theme.of(context).colorScheme.errorContainer,
-          ),
-        );
-      },
-    );
+    await _downloadFiles([file]);
   }
 
   Future<void> _downloadSelectedFiles() async {
-    final files = _controller.value.selectedFiles;
+    final files = _controller.value.selectedFiles.toList();
     if (files.isEmpty) return;
+    await _downloadFiles(files);
+  }
 
-    final messenger = ScaffoldMessenger.of(context);
-    messenger.showSnackBar(
-      SnackBar(content: Text('Downloading ${files.length} files...')),
-    );
+  Future<void> _downloadFiles(List<FileInfo> files) async {
+    final fileCount = files.length;
+    final isMultiple = fileCount > 1;
+    
+    context.showSnackBar(isMultiple 
+        ? 'Downloading $fileCount files...' 
+        : 'Downloading ${files.first.displayName}...');
 
-    final result = await _controller.downloadSelectedFiles();
+    final result = await _controller.downloadFiles(files);
 
     if (!mounted) return;
 
     result.when(
-      success: (_) {
-        messenger.showSnackBar(
-          SnackBar(content: Text('Downloaded ${files.length} files')),
-        );
+      success: (filename) {
+        context.showSuccessSnackBar(isMultiple 
+            ? 'Downloaded $fileCount files as $filename'
+            : 'Downloaded $filename');
       },
+      error: (message, _) => context.showErrorSnackBar('Download failed: $message'),
       loading: () {},
-      error: (message, exception) {
-        messenger.showSnackBar(
-          SnackBar(
-            content: Text('Download failed: $message'),
-            backgroundColor: Theme.of(context).colorScheme.errorContainer,
-          ),
-        );
-      },
     );
   }
 
@@ -408,7 +366,6 @@ final class _FileExplorerState extends State<FileExplorer> {
     final files = _controller.value.selectedFiles;
     if (files.isEmpty) return;
 
-    final messenger = ScaffoldMessenger.of(context);
     final confirmed = await _showDeleteConfirmation(
       files.map((f) => f.displayName).toList(),
     );
@@ -419,17 +376,9 @@ final class _FileExplorerState extends State<FileExplorer> {
     if (!mounted) return;
 
     result.when(
-      success: (_) {
-        messenger.showSnackBar(
-          SnackBar(content: Text('Deleted ${files.length} items')),
-        );
-      },
+      success: (_) => context.showSuccessSnackBar('Deleted ${files.length} items'),
+      error: (message, _) => context.showErrorSnackBar('Delete failed: $message'),
       loading: () {},
-      error: (message, exception) {
-        messenger.showSnackBar(
-          SnackBar(content: Text('Delete failed: $message')),
-        );
-      },
     );
   }
 
@@ -441,13 +390,9 @@ final class _FileExplorerState extends State<FileExplorer> {
         onRename: (newName) async {
           final result = await _controller.renameFile(file, newName);
           result.when(
-            success: (_) {
-              // Success message is handled by the dialog
-            },
+            success: (_) {},
+            error: (message, _) => throw Exception(message),
             loading: () {},
-            error: (message, exception) {
-              throw Exception(message);
-            },
           );
         },
       ),
@@ -460,11 +405,9 @@ final class _FileExplorerState extends State<FileExplorer> {
       builder: (context) => AlertDialog(
         icon: const Icon(Icons.delete_forever),
         title: const Text('Confirm Delete'),
-        content: Text(
-          fileNames.length == 1
-              ? 'Are you sure you want to delete "${fileNames.first}"?'
-              : 'Delete ${fileNames.length} items?\n\n${fileNames.take(3).join(', ')}${fileNames.length > 3 ? '...' : ''}',
-        ),
+        content: Text(fileNames.length == 1
+            ? 'Are you sure you want to delete "${fileNames.first}"?'
+            : 'Delete ${fileNames.length} items?\n\n${fileNames.take(3).join(', ')}${fileNames.length > 3 ? '...' : ''}'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),

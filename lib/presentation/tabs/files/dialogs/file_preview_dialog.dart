@@ -19,7 +19,7 @@ class FilePreviewDialog extends StatelessWidget {
   final String currentPath;
   final VoidCallback onEdit;
   final VoidCallback onDownload;
-  final VoidCallback onChanged;
+  final Future<void> Function() onChanged;
 
   @override
   Widget build(BuildContext context) {

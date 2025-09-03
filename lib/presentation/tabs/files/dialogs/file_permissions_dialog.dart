@@ -55,6 +55,27 @@ final class _FilePermissionsDialogState extends State<FilePermissionsDialog> {
     octalController.text = permissions.toOctal();
   }
 
+  void _updateOwnerPermissions(bool r, bool w, bool x) {
+    setState(() {
+      permissions = permissions.copyWith(ownerRead: r, ownerWrite: w, ownerExecute: x);
+      _updateOctal();
+    });
+  }
+
+  void _updateGroupPermissions(bool r, bool w, bool x) {
+    setState(() {
+      permissions = permissions.copyWith(groupRead: r, groupWrite: w, groupExecute: x);
+      _updateOctal();
+    });
+  }
+
+  void _updateOthersPermissions(bool r, bool w, bool x) {
+    setState(() {
+      permissions = permissions.copyWith(othersRead: r, othersWrite: w, othersExecute: x);
+      _updateOctal();
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -82,36 +103,9 @@ final class _FilePermissionsDialogState extends State<FilePermissionsDialog> {
           const SizedBox(height: 16),
           Text('Permissions:', style: theme.textTheme.titleSmall),
           const SizedBox(height: 8),
-          _buildPermissionGroup('Owner', permissions.ownerRead, permissions.ownerWrite, permissions.ownerExecute, (r, w, x) {
-            setState(() {
-              permissions = FilePermissions(
-                ownerRead: r, ownerWrite: w, ownerExecute: x,
-                groupRead: permissions.groupRead, groupWrite: permissions.groupWrite, groupExecute: permissions.groupExecute,
-                othersRead: permissions.othersRead, othersWrite: permissions.othersWrite, othersExecute: permissions.othersExecute,
-              );
-              _updateOctal();
-            });
-          }),
-          _buildPermissionGroup('Group', permissions.groupRead, permissions.groupWrite, permissions.groupExecute, (r, w, x) {
-            setState(() {
-              permissions = FilePermissions(
-                ownerRead: permissions.ownerRead, ownerWrite: permissions.ownerWrite, ownerExecute: permissions.ownerExecute,
-                groupRead: r, groupWrite: w, groupExecute: x,
-                othersRead: permissions.othersRead, othersWrite: permissions.othersWrite, othersExecute: permissions.othersExecute,
-              );
-              _updateOctal();
-            });
-          }),
-          _buildPermissionGroup('Others', permissions.othersRead, permissions.othersWrite, permissions.othersExecute, (r, w, x) {
-            setState(() {
-              permissions = FilePermissions(
-                ownerRead: permissions.ownerRead, ownerWrite: permissions.ownerWrite, ownerExecute: permissions.ownerExecute,
-                groupRead: permissions.groupRead, groupWrite: permissions.groupWrite, groupExecute: permissions.groupExecute,
-                othersRead: r, othersWrite: w, othersExecute: x,
-              );
-              _updateOctal();
-            });
-          }),
+          _buildPermissionGroup('Owner', permissions.ownerRead, permissions.ownerWrite, permissions.ownerExecute, _updateOwnerPermissions),
+          _buildPermissionGroup('Group', permissions.groupRead, permissions.groupWrite, permissions.groupExecute, _updateGroupPermissions),
+          _buildPermissionGroup('Others', permissions.othersRead, permissions.othersWrite, permissions.othersExecute, _updateOthersPermissions),
         ],
       ),
       actions: [
@@ -121,7 +115,7 @@ final class _FilePermissionsDialogState extends State<FilePermissionsDialog> {
         ),
         FilledButton(
           onPressed: () async {
-            await widget.onSave(permissions.humanReadable);
+            await widget.onSave(permissions.toOctal());
             if (context.mounted) Navigator.of(context).pop();
           },
           child: const Text('Save'),

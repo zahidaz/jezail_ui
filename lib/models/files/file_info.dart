@@ -231,6 +231,30 @@ class FilePermissions {
     );
   }
 
+  FilePermissions copyWith({
+    bool? ownerRead,
+    bool? ownerWrite,
+    bool? ownerExecute,
+    bool? groupRead,
+    bool? groupWrite,
+    bool? groupExecute,
+    bool? othersRead,
+    bool? othersWrite,
+    bool? othersExecute,
+  }) {
+    return FilePermissions(
+      ownerRead: ownerRead ?? this.ownerRead,
+      ownerWrite: ownerWrite ?? this.ownerWrite,
+      ownerExecute: ownerExecute ?? this.ownerExecute,
+      groupRead: groupRead ?? this.groupRead,
+      groupWrite: groupWrite ?? this.groupWrite,
+      groupExecute: groupExecute ?? this.groupExecute,
+      othersRead: othersRead ?? this.othersRead,
+      othersWrite: othersWrite ?? this.othersWrite,
+      othersExecute: othersExecute ?? this.othersExecute,
+    );
+  }
+
   String toOctal() {
     int owner =
         (ownerRead ? 4 : 0) + (ownerWrite ? 2 : 0) + (ownerExecute ? 1 : 0);

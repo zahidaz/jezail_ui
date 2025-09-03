@@ -216,12 +216,7 @@ class _FridaToolState extends State<FridaTool> {
                                   Clipboard.setData(
                                     ClipboardData(text: item.value),
                                   );
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(
-                                      content: Text('Path copied to clipboard'),
-                                      duration: Duration(seconds: 2),
-                                    ),
-                                  );
+                                  context.showSuccessSnackBar('Path copied to clipboard');
                                 },
                                 child: Row(
                                   children: [

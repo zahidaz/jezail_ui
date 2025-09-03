@@ -6,6 +6,7 @@ import 'package:jezail_ui/core/enums/file_enums.dart';
 import 'package:jezail_ui/presentation/tabs/files/widgets/context_menu.dart';
 import 'package:jezail_ui/presentation/tabs/files/dialogs/file_ownership_dialog.dart';
 import 'package:jezail_ui/presentation/tabs/files/dialogs/file_permissions_dialog.dart';
+import 'package:jezail_ui/core/extensions/snackbar_extensions.dart';
 
 final class FileView extends StatefulWidget {
   const FileView({
@@ -35,7 +36,7 @@ final class FileView extends StatefulWidget {
   final void Function(FileSortField field)? onSort;
   final FileRepository? repository;
   final String? currentPath;
-  final VoidCallback? onChanged;
+  final Future<void> Function()? onChanged;
   final Future<void> Function(FileInfo file)? onRename;
   final Future<void> Function(FileInfo file)? onDownload;
   final bool isMultiSelectMode;
@@ -57,7 +58,7 @@ final class _FileViewState extends State<FileView> {
   void Function(FileSortField field)? get onSort => widget.onSort;
   FileRepository? get repository => widget.repository;
   String? get currentPath => widget.currentPath;
-  VoidCallback? get onChanged => widget.onChanged;
+  Future<void> Function()? get onChanged => widget.onChanged;
   Future<void> Function(FileInfo file)? get onRename => widget.onRename;
   Future<void> Function(FileInfo file)? get onDownload => widget.onDownload;
   bool get isMultiSelectMode => widget.isMultiSelectMode;
@@ -393,12 +394,10 @@ final class _FileViewState extends State<FileView> {
             if (group != file.group) {
               await repository!.changeGroup(filePath, group);
             }
-            onChanged?.call();
+            await onChanged?.call();
           } catch (e) {
             if (context.mounted) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text('Failed to update ownership: $e'), backgroundColor: Theme.of(context).colorScheme.error),
-              );
+              context.showErrorSnackBar('Failed to update ownership: $e');
             }
           }
         },
@@ -416,12 +415,10 @@ final class _FileViewState extends State<FileView> {
           try {
             final filePath = currentPath!.endsWith('/') ? '$currentPath${file.name}' : '$currentPath/${file.name}';
             await repository!.changePermissions(filePath, permissions);
-            onChanged?.call();
+            await onChanged?.call();
           } catch (e) {
             if (context.mounted) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text('Failed to update permissions: $e'), backgroundColor: Theme.of(context).colorScheme.error),
-              );
+              context.showErrorSnackBar('Failed to update permissions: $e');
             }
           }
         },

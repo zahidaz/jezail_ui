@@ -3,24 +3,8 @@ import 'package:flutter/services.dart';
 import 'package:jezail_ui/models/files/file_info.dart';
 import 'package:jezail_ui/core/extensions/snackbar_extensions.dart';
 
-final class FileContextMenu extends StatelessWidget {
-  const FileContextMenu({
-    super.key,
-    required this.file,
-    required this.currentPath,
-    this.onDownload,
-    this.onRename,
-  });
-
-  final FileInfo file;
-  final String currentPath;
-  final Future<void> Function(FileInfo file)? onDownload;
-  final Future<void> Function(FileInfo file)? onRename;
-
-  @override
-  Widget build(BuildContext context) {
-    return const SizedBox.shrink();
-  }
+final class FileContextMenu {
+  const FileContextMenu._();
 
   static Future<void> show(
     BuildContext context,
