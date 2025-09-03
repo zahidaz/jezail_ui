@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:jezail_ui/app_config.dart';
 import 'package:jezail_ui/services/device_service.dart';
 import 'package:jezail_ui/core/extensions/snackbar_extensions.dart';
-import 'package:jezail_ui/presentation/utils/dialog_utils.dart';
 import 'package:jezail_ui/core/log.dart';
 import 'package:jezail_ui/core/enums/battery_level.dart';
 import 'package:jezail_ui/models/device/device_info.dart';
@@ -204,11 +203,7 @@ class _HeaderState extends State<Header> with TickerProviderStateMixin {
       _btn(Icons.volume_down, widget.deviceService.pressVolumeDown, 'Volume Down'),
       _btn(Icons.volume_off, widget.deviceService.muteVolume, 'Mute'),
     ]),
-    _group([
-      _btnCustom(Icons.content_copy, _copy, 'Copy Clipboard'),
-      _btnCustom(Icons.content_paste, _set, 'Set Clipboard'),
-      _btn(Icons.clear, widget.deviceService.clearClipboard, 'Clear Clipboard'),
-    ]),
+    _single(Icons.content_paste, _showClipboardDialog, 'Clipboard Manager'),
     _single(Icons.lock, widget.deviceService.pressPower, 'Screen Lock'),
     _single(Icons.screenshot, widget.deviceService.downloadScreenshot, 'Screenshot'),
   ];
@@ -234,69 +229,192 @@ class _HeaderState extends State<Header> with TickerProviderStateMixin {
       constraints: const BoxConstraints.tightFor(width: 32, height: 32),
     );
 
-  Widget _single(IconData icon, Future<void> Function() action, String tooltip) =>
+  Widget _single(IconData icon, dynamic action, String tooltip) =>
     IconButton(
       icon: Icon(icon, color: Colors.white, size: 20),
-      onPressed: () => context.runWithFeedback(
-        action: action,
-        successMessage: '',
-        errorMessage: '',
-      ),
+      onPressed: action is Future<void> Function()
+        ? () => context.runWithFeedback(
+            action: action,
+            successMessage: '',
+            errorMessage: '',
+          )
+        : action,
       tooltip: tooltip,
       constraints: const BoxConstraints.tightFor(width: 36, height: 36),
     );
 
-  Widget _btnCustom(IconData icon, VoidCallback action, String tooltip) =>
-    IconButton(
-      icon: Icon(icon, color: Colors.white, size: 18),
-      onPressed: action,
-      tooltip: tooltip,
-      constraints: const BoxConstraints.tightFor(width: 32, height: 32),
-    );
-
-  Future<void> _copy() async {
+  Future<void> _showClipboardDialog() async {
+    if (!mounted) return;
+    
     try {
       final content = await widget.deviceService.getClipboard();
       if (!mounted) return;
       
-      switch (content) {
-        case null || '':
-          context.showWarningSnackBar('Clipboard is empty');
-        case final String value:
-          context.showSuccessSnackBar(
-            'Clipboard copied',
-            action: SnackBarAction(
-              label: 'VIEW',
-              textColor: Colors.white,
-              onPressed: () => DialogUtils.showContentDialog(
-                context,
-                title: 'Clipboard Content',
-                content: SelectableText(value),
-              ),
-            ),
-          );
+      await showDialog(
+        context: context,
+        builder: (context) => _ClipboardDialog(
+          initialContent: content ?? '',
+          onSet: (newContent) => widget.deviceService.setClipboard(newContent),
+          onClear: () => widget.deviceService.clearClipboard(),
+        ),
+      );
+    } catch (e) {
+      if (mounted) context.showErrorSnackBar('Failed to load clipboard');
+    }
+  }
+}
+
+class _ClipboardDialog extends StatefulWidget {
+  const _ClipboardDialog({
+    required this.initialContent,
+    required this.onSet,
+    required this.onClear,
+  });
+
+  final String initialContent;
+  final Future<void> Function(String) onSet;
+  final Future<void> Function() onClear;
+
+  @override
+  State<_ClipboardDialog> createState() => _ClipboardDialogState();
+}
+
+class _ClipboardDialogState extends State<_ClipboardDialog> {
+  late final TextEditingController _controller;
+  bool _loading = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = TextEditingController(text: widget.initialContent);
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  Future<void> _setClipboard() async {
+    if (_loading) return;
+    
+    setState(() => _loading = true);
+    try {
+      await widget.onSet(_controller.text);
+      if (mounted) {
+        context.showSuccessSnackBar('Clipboard updated');
+        Navigator.of(context).pop();
       }
     } catch (e) {
-      if (mounted) context.showErrorSnackBar('Failed to copy clipboard');
+      if (mounted) context.showErrorSnackBar('Failed to set clipboard');
+    } finally {
+      if (mounted) setState(() => _loading = false);
     }
   }
 
-  Future<void> _set() async {
-    if (!mounted) return;
+  Future<void> _clearClipboard() async {
+    if (_loading) return;
     
-    final result = await DialogUtils.showTextInputDialog(
-      context,
-      title: 'Set Clipboard',
-      hintText: 'Enter new clipboard text',
-      confirmText: 'Set',
-    );
-    
-    if (result case final String value when value.isNotEmpty && mounted) {
-      await context.runWithFeedback(
-        action: () => widget.deviceService.setClipboard(value),
-        successMessage: 'Clipboard updated',
-        errorMessage: 'Failed to set clipboard',
-      );
+    setState(() => _loading = true);
+    try {
+      await widget.onClear();
+      if (mounted) {
+        context.showSuccessSnackBar('Clipboard cleared');
+        Navigator.of(context).pop();
+      }
+    } catch (e) {
+      if (mounted) context.showErrorSnackBar('Failed to clear clipboard');
+    } finally {
+      if (mounted) setState(() => _loading = false);
     }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    
+    return AlertDialog(
+      title: const Text('Clipboard Manager'),
+      content: SizedBox(
+        width: 400,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Current Content:',
+              style: TextStyle(
+                fontSize: 12,
+                color: cs.onSurfaceVariant,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: cs.surfaceContainerHigh,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: cs.outline.withAlpha(50)),
+              ),
+              child: SelectableText(
+                widget.initialContent.isEmpty ? 'Empty' : widget.initialContent,
+                style: TextStyle(
+                  fontFamily: 'monospace',
+                  fontSize: 13,
+                  color: widget.initialContent.isEmpty 
+                    ? cs.onSurfaceVariant 
+                    : cs.onSurface,
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'New Content:',
+              style: TextStyle(
+                fontSize: 12,
+                color: cs.onSurfaceVariant,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+            const SizedBox(height: 8),
+            TextField(
+              controller: _controller,
+              maxLines: 4,
+              decoration: const InputDecoration(
+                border: OutlineInputBorder(),
+                hintText: 'Enter clipboard content...',
+                isDense: true,
+              ),
+              style: const TextStyle(fontSize: 14),
+            ),
+          ],
+        ),
+      ),
+      actions: [
+        if (_loading)
+          const Padding(
+            padding: EdgeInsets.symmetric(horizontal: 16),
+            child: SizedBox(
+              width: 16,
+              height: 16,
+              child: CircularProgressIndicator(strokeWidth: 2),
+            ),
+          ),
+        TextButton(
+          onPressed: _loading ? null : () => Navigator.of(context).pop(),
+          child: const Text('Cancel'),
+        ),
+        TextButton(
+          onPressed: _loading ? null : _clearClipboard,
+          child: const Text('Clear'),
+        ),
+        FilledButton(
+          onPressed: _loading ? null : _setClipboard,
+          child: const Text('Set'),
+        ),
+      ],
+    );
   }
 }
