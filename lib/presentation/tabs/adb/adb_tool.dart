@@ -174,7 +174,7 @@ class _AdbToolState extends State<AdbTool> {
             ListTile(
               contentPadding: EdgeInsets.zero,
               leading: Icon(
-                Icons.developer_mode,
+                Icons.terminal,
                 color: Theme.of(context).colorScheme.primary,
               ),
               title: Text(

@@ -177,7 +177,7 @@ class _FridaToolState extends State<FridaTool> {
             ListTile(
               contentPadding: EdgeInsets.zero,
               leading: Icon(
-                Icons.bug_report,
+                Icons.api,
                 color: Theme.of(context).colorScheme.primary,
               ),
               title: Text(

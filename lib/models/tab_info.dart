@@ -36,7 +36,7 @@ final tabsConfig = [
   TabInfo(
     title: 'Packages',
     path: '/packages',
-    icon: Icons.apps,
+    icon: Icons.inventory_2,
     builder: (apiService) => PackagesTab(
       packageRepository: PackageRepository(PackageService(apiService)),
     ),
@@ -44,7 +44,7 @@ final tabsConfig = [
   TabInfo(
     title: 'Files',
     path: '/files',
-    icon: Icons.folder,
+    icon: Icons.folder_open,
     builder: (apiService) => FilesTab(
       repository: FileRepository(FilesService(apiService)),
     ),
@@ -60,7 +60,7 @@ final tabsConfig = [
   TabInfo(
     title: 'ADB',
     path: '/adb',
-    icon: Icons.developer_mode,
+    icon: Icons.terminal,
     builder: (apiService) => SingleChildScrollView(
       padding: const EdgeInsets.all(16.0),
       child: Center(
@@ -74,7 +74,7 @@ final tabsConfig = [
   TabInfo(
     title: 'Frida',
     path: '/frida',
-    icon: Icons.bug_report,
+    icon: Icons.api,
     builder: (apiService) => SingleChildScrollView(
       padding: const EdgeInsets.all(16.0),
       child: Center(
