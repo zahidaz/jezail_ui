@@ -15,6 +15,7 @@ import 'package:jezail_ui/repositories/package_repository.dart';
 import 'package:jezail_ui/presentation/tabs/packages/packages_tab.dart';
 import 'package:jezail_ui/core/log.dart';
 import 'package:jezail_ui/presentation/widgets/header.dart';
+import 'package:jezail_ui/presentation/widgets/app_sidebar.dart';
 
 final _router = GoRouter(
   routes: [
@@ -285,77 +286,6 @@ class _TabContainerState extends State<TabContainer> {
     return IndexedStack(
       index: widget.currentTabIndex,
       children: _tabWidgets,
-    );
-  }
-}
-
-class AppSidebar extends StatelessWidget {
-  final bool collapsed;
-  final int selectedTab;
-  final List<String> tabs;
-  final List<IconData> tabIcons;
-  final Function(int) onTabSelected;
-
-  const AppSidebar({
-    super.key,
-    required this.collapsed,
-    required this.selectedTab,
-    required this.tabs,
-    required this.tabIcons,
-    required this.onTabSelected,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return AnimatedContainer(
-      duration: const Duration(milliseconds: 200),
-      width: collapsed ? 56 : 180,
-      color: Theme.of(context).colorScheme.surfaceContainerHighest,
-      child: Column(
-        children: [
-          const SizedBox(height: 16),
-          ...List.generate(
-            tabs.length,
-            (index) => SidebarItem(
-              icon: tabIcons[index],
-              title: tabs[index],
-              isSelected: selectedTab == index,
-              isCollapsed: collapsed,
-              onTap: () => onTabSelected(index),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class SidebarItem extends StatelessWidget {
-  final IconData icon;
-  final String title;
-  final bool isSelected;
-  final bool isCollapsed;
-  final VoidCallback onTap;
-
-  const SidebarItem({
-    super.key,
-    required this.icon,
-    required this.title,
-    required this.isSelected,
-    required this.isCollapsed,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return ListTile(
-      leading: Icon(
-        icon,
-        color: isSelected ? Theme.of(context).colorScheme.primary : Colors.grey,
-      ),
-      title: isCollapsed ? null : Text(title),
-      selected: isSelected,
-      onTap: onTap,
     );
   }
 }
