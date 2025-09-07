@@ -197,7 +197,20 @@ class ApiService {
       }
     }
 
-    final errorMsg = '$method $endpoint failed (${res.statusCode} ${res.reasonPhrase ?? ''})';
+    String serverMessage = '';
+    if (res.body.isNotEmpty) {
+      try {
+        final errorResponse = jsonDecode(res.body);
+        serverMessage = errorResponse['error'] ?? errorResponse['message'] ?? '';
+      } catch (_) {
+        serverMessage = res.body;
+      }
+    }
+    
+    final errorMsg = serverMessage.isNotEmpty 
+        ? serverMessage 
+        : '$method $endpoint failed (${res.statusCode} ${res.reasonPhrase ?? ''})';
+    
     Log.warning(errorMsg);
     throw ApiException(errorMsg, res.statusCode);
   }

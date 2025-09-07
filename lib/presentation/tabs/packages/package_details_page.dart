@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:go_router/go_router.dart';
 import 'package:jezail_ui/models/packages/package_info.dart';
-import 'package:jezail_ui/models/packages/details.dart';
 import 'package:jezail_ui/repositories/package_repository.dart';
 import 'package:jezail_ui/core/enums/package_enums.dart';
 import 'package:jezail_ui/core/extensions/snackbar_extensions.dart';
+import 'package:jezail_ui/presentation/tabs/packages/package_list_page.dart';
 
 class PackageDetailsPage extends StatefulWidget {
   final PackageInfo? package;
@@ -24,530 +25,651 @@ class PackageDetailsPage extends StatefulWidget {
   State<PackageDetailsPage> createState() => _PackageDetailsPageState();
 }
 
-class _PackageDetailsPageState extends State<PackageDetailsPage>
-    with TickerProviderStateMixin {
-  late TabController _tabController;
-  
-  PackageDetails? details;
-  Permissions? permissions;
-  Signatures? signatures;
-  ProcessInfo? processInfo;
-  bool isDebuggable = false;
-  bool isRunning = false;
-  bool isLoading = true;
-  String? error;
+class _PackageDetailsPageState extends State<PackageDetailsPage> {
+  Map<String, dynamic>? _details;
+  Map<String, dynamic>? _permissions;
+  Map<String, dynamic>? _signatures;
+  Map<String, dynamic>? _processInfo;
+  bool? _isDebuggable;
+  bool? _isRunning;
 
-  String _permissionFilter = '';
-  String _componentFilter = '';
-  bool _showOnlyExported = false;
-  bool _showOnlyDangerous = false;
+  final Map<String, bool> _sectionLoading = {};
+  final Map<String, String?> _sectionErrors = {};
+  String _searchQuery = '';
+  final Set<String> _expandedSections = {};
 
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 6, vsync: this);
     if (widget.package != null) {
       _loadPackageData();
     }
   }
 
-  @override
-  void dispose() {
-    _tabController.dispose();
-    super.dispose();
-  }
-
   Future<void> _loadPackageData() async {
     if (widget.package == null) return;
-    
-    setState(() => isLoading = true);
-    
+
+    final packageName = widget.package!.packageName;
+    _loadSection(
+      'details',
+      () => widget.repository.getPackageDetails(packageName),
+    );
+    _loadSection(
+      'permissions',
+      () => widget.repository.getAllPermissions(packageName),
+    );
+    _loadSection(
+      'signatures',
+      () => widget.repository.getPackageSignatures(packageName),
+    );
+    _loadSection(
+      'processInfo',
+      () => widget.repository.getPackageProcessInfo(packageName),
+    );
+    _loadSection(
+      'debuggable',
+      () => widget.repository.isPackageDebuggable(packageName),
+    );
+    _loadSection(
+      'running',
+      () => widget.repository.isPackageRunning(packageName),
+    );
+  }
+
+  Future<void> _loadSection(
+    String section,
+    Future<dynamic> Function() loader,
+  ) async {
+    setState(() {
+      _sectionLoading[section] = true;
+      _sectionErrors[section] = null;
+    });
+
     try {
-      final results = await Future.wait([
-        widget.repository.getPackageDetails(widget.package!.packageName),
-        widget.repository.getAllPermissions(widget.package!.packageName),
-        widget.repository.getPackageSignatures(widget.package!.packageName),
-        widget.repository.isPackageDebuggable(widget.package!.packageName),
-        widget.repository.isPackageRunning(widget.package!.packageName),
-        widget.repository.getPackageProcessInfo(widget.package!.packageName),
-      ]);
+      final result = await loader();
 
-      setState(() {
-        details = PackageDetails.fromJson(results[0] as Map<String, dynamic>);
-        permissions = Permissions.fromJson(results[1] as Map<String, dynamic>);
-        signatures = Signatures.fromJson(results[2] as Map<String, dynamic>);
-        isDebuggable = results[3] as bool;
-        isRunning = results[4] as bool;
-        processInfo = ProcessInfo.fromJson(results[5] as Map<String, dynamic>);
-        isLoading = false;
-        error = null;
-      });
+      if (mounted) {
+        setState(() {
+          switch (section) {
+            case 'details':
+              _details = result['data'];
+              break;
+            case 'permissions':
+              _permissions = result['data'];
+              break;
+            case 'signatures':
+              _signatures = result['data'];
+              break;
+            case 'processInfo':
+              _processInfo = result['data'];
+              break;
+            case 'debuggable':
+              _isDebuggable = result;
+              break;
+            case 'running':
+              _isRunning = result;
+              break;
+          }
+          _sectionLoading[section] = false;
+        });
+      }
     } catch (e) {
-      setState(() {
-        error = 'Failed to load package details: $e';
-        isLoading = false;
-      });
-    }
-  }
-
-  void _copy(String text, String label) {
-    Clipboard.setData(ClipboardData(text: text));
-    context.showInfoSnackBar('$label copied to clipboard');
-  }
-
-  List<String> get _filteredPermissions {
-    if (permissions == null) return [];
-    var perms = permissions!.all;
-    
-    if (_permissionFilter.isNotEmpty) {
-      perms = perms.where((p) => 
-        p.toLowerCase().contains(_permissionFilter.toLowerCase())).toList();
-    }
-    
-    if (_showOnlyDangerous) {
-      perms = perms.where((p) => _isDangerous(p)).toList();
-    }
-    
-    return perms;
-  }
-
-  bool _isDangerous(String permission) {
-    const dangerous = [
-      'CAMERA', 'MICROPHONE', 'RECORD_AUDIO', 'LOCATION', 'CONTACTS',
-      'PHONE', 'SMS', 'CALENDAR', 'CALL_LOG', 'SENSORS', 'STORAGE',
-      'EXTERNAL_STORAGE', 'MANAGE_EXTERNAL_STORAGE', 'SYSTEM_ALERT_WINDOW',
-      'WRITE_SETTINGS', 'INSTALL_PACKAGES', 'DELETE_PACKAGES', 'BODY_SENSORS',
-      'READ_PHONE_STATE', 'CALL_PHONE', 'SEND_SMS', 'READ_SMS'
-    ];
-    return dangerous.any((d) => permission.contains(d));
-  }
-
-  Color _getPermissionColor(String permission) {
-    if (permissions?.denied.contains(permission) == true) {
-      return Colors.red;
-    } else if (_isDangerous(permission)) {
-      return Colors.orange;
-    } else {
-      return Colors.green;
+      if (mounted) {
+        setState(() {
+          _sectionLoading[section] = false;
+          _sectionErrors[section] = e.toString();
+        });
+      }
     }
   }
 
   @override
   Widget build(BuildContext context) {
     if (widget.package == null) {
-      return const Center(child: Text('No package selected'));
+      return _buildEmptyState();
     }
 
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(widget.package!.name),
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: widget.onBack,
-        ),
-        bottom: TabBar(
-          controller: _tabController,
-          isScrollable: true,
-          tabs: const [
-            Tab(text: 'Overview'),
-            Tab(text: 'Security'),
-            Tab(text: 'Permissions'),
-            Tab(text: 'Components'),
-            Tab(text: 'File System'),
-            Tab(text: 'Runtime'),
-          ],
-        ),
-      ),
-      body: isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : error != null
-              ? Center(child: Text(error!))
-              : TabBarView(
-                  controller: _tabController,
-                  children: [
-                    _buildOverviewTab(),
-                    _buildSecurityTab(),
-                    _buildPermissionsTab(),
-                    _buildComponentsTab(),
-                    _buildFileSystemTab(),
-                    _buildRuntimeTab(),
-                  ],
-                ),
-    );
-  }
-
-  Widget _buildOverviewTab() {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _buildInfoCard('Basic Information', [
-            _buildInfoRow('Package Name', widget.package!.packageName, copyable: true),
-            _buildInfoRow('Display Name', widget.package!.name),
-            _buildInfoRow('Version', details?.versionName ?? 'Unknown'),
-            _buildInfoRow('Version Code', details?.versionCode.toString() ?? 'Unknown'),
-            _buildInfoRow('System Package', widget.package!.isSystemApp ? 'Yes' : 'No'),
-            _buildInfoRow('Running', isRunning ? 'YES - ACTIVE' : 'No', 
-              color: isRunning ? Colors.green : Colors.grey),
-            _buildInfoRow('Debuggable', isDebuggable ? 'YES - SECURITY RISK' : 'No',
-              color: isDebuggable ? Colors.red : Colors.green),
-            if (processInfo?.pid != null)
-              _buildInfoRow('Process ID', processInfo!.pid.toString(), copyable: true),
-          ]),
-          const SizedBox(height: 16),
-          _buildInfoCard('Installation Details', [
-            _buildInfoRow('First Install', _formatDate(details?.firstInstall)),
-            _buildInfoRow('Last Update', _formatDate(details?.lastUpdate)),
-            _buildInfoRow('Target SDK', details?.appInfo.targetSdk.toString() ?? 'Unknown'),
-            _buildInfoRow('Min SDK', details?.appInfo.minSdk.toString() ?? 'Unknown'),
-            _buildInfoRow('Compile SDK', details?.appInfo.compileSdk.toString() ?? 'Unknown'),
-          ]),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildSecurityTab() {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _buildInfoCard('Security Status', [
-            _buildInfoRow('Debuggable', isDebuggable ? 'YES - SECURITY RISK' : 'No',
-              color: isDebuggable ? Colors.red : Colors.green),
-            _buildInfoRow('Debug Certificate', signatures?.hasDebugCert == true ? 'YES - DEBUG BUILD' : 'No',
-              color: signatures?.hasDebugCert == true ? Colors.red : Colors.green),
-            _buildInfoRow('System Package', widget.package!.isSystemApp ? 'Yes' : 'No'),
-            _buildInfoRow('UID', details?.appInfo.uid.toString() ?? 'Unknown'),
-          ]),
-          const SizedBox(height: 16),
-          if (signatures != null) _buildSignaturesCard(),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildSignaturesCard() {
-    return _buildInfoCard('Signatures (${signatures!.count})', 
-      signatures!.signatures.map((sig) => Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _buildInfoRow('Algorithm', sig.algorithm),
-          _buildInfoRow('Subject', sig.subject, copyable: true),
-          _buildInfoRow('Issuer', sig.issuer, copyable: true),
-          _buildInfoRow('Serial Number', sig.serialNumber, copyable: true),
-          _buildInfoRow('Valid From', sig.notBefore),
-          _buildInfoRow('Valid Until', sig.notAfter),
-          _buildInfoRow('MD5', sig.md5, copyable: true, monospace: true),
-          _buildInfoRow('SHA1', sig.sha1, copyable: true, monospace: true),
-          _buildInfoRow('SHA256', sig.sha256, copyable: true, monospace: true),
-          if (sig != signatures!.signatures.last) const Divider(),
-        ],
-      )).toList(),
-    );
-  }
-
-  Widget _buildPermissionsTab() {
     return Column(
-      children: [
-        Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            children: [
-              TextField(
-                decoration: const InputDecoration(
-                  labelText: 'Filter permissions',
-                  prefixIcon: Icon(Icons.search),
-                  border: OutlineInputBorder(),
-                ),
-                onChanged: (value) => setState(() => _permissionFilter = value),
-              ),
-              const SizedBox(height: 8),
-              Row(
+        children: [
+          _buildHeader(),
+          _buildSearchBar(),
+          Expanded(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Expanded(
-                    child: CheckboxListTile(
-                      title: const Text('Show only dangerous'),
-                      value: _showOnlyDangerous,
-                      onChanged: (value) => setState(() => _showOnlyDangerous = value ?? false),
-                      dense: true,
-                    ),
-                  ),
+                  _buildSignatureCard(),
+                  const SizedBox(height: 16),
+                  _buildPermissionsCard(),
+                  const SizedBox(height: 16),
+                  _buildActivitiesSection(),
+                  const SizedBox(height: 16),
+                  _buildReceiversSection(),
+                  const SizedBox(height: 16),
+                  _buildProvidersSection(),
+                  const SizedBox(height: 16),
+                  if (_processInfo != null && _isRunning == true) ...[
+                    _buildProcessInfoCard(),
+                    const SizedBox(height: 16),
+                  ],
+                  _buildSecurityInfoSection(),
+                  const SizedBox(height: 16),
+                  _buildVersionInstallSection(),
+                  const SizedBox(height: 16),
+                  _buildTechnicalInfoSection(),
+                  const SizedBox(height: 16),
+                  _buildFileSystemInfoSection(),
                 ],
               ),
-            ],
+            ),
           ),
-        ),
-        Expanded(
-          child: ListView.builder(
-            itemCount: _filteredPermissions.length,
-            itemBuilder: (context, index) {
-              final permission = _filteredPermissions[index];
-              final isGranted = permissions?.granted.contains(permission) ?? false;
-              final isDangerous = _isDangerous(permission);
-              
-              return ListTile(
-                leading: Icon(
-                  isGranted ? Icons.check_circle : Icons.cancel,
-                  color: _getPermissionColor(permission),
-                ),
-                title: Text(
-                  permission,
-                  style: TextStyle(
-                    fontFamily: 'monospace',
-                    fontWeight: isDangerous ? FontWeight.bold : FontWeight.normal,
+        ],
+    );
+  }
+
+  Widget _buildEmptyState() {
+    return const Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Icons.android, size: 64, color: Colors.grey),
+          SizedBox(height: 16),
+          Text(
+            'No package selected',
+            style: TextStyle(fontSize: 16, color: Colors.grey),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildHeader() {
+    final cs = Theme.of(context).colorScheme;
+    final pkg = widget.package!;
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: cs.surface,
+        border: Border(bottom: BorderSide(color: cs.outline.withAlpha(25))),
+      ),
+      child: Row(
+        children: [
+          IconButton(
+            onPressed: widget.onBack,
+            icon: const Icon(Icons.arrow_back, size: 20),
+          ),
+          const SizedBox(width: 12),
+          _buildPackageIcon(),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  pkg.name,
+                  style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w600,
                   ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
-                subtitle: Text(
-                  '${isGranted ? 'GRANTED' : 'DENIED'}${isDangerous ? ' • DANGEROUS' : ''}',
-                  style: TextStyle(
-                    color: _getPermissionColor(permission),
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                trailing: Row(
-                  mainAxisSize: MainAxisSize.min,
+                const SizedBox(height: 2),
+                Row(
                   children: [
-                    if (isDangerous)
-                      IconButton(
-                        icon: Icon(isGranted ? Icons.block : Icons.check),
-                        tooltip: isGranted ? 'Revoke Permission' : 'Grant Permission',
-                        onPressed: () => isGranted
-                            ? _revokePermission(permission)
-                            : _grantPermission(permission),
+                    Expanded(
+                      child: Row(
+                        children: [
+                          Flexible(
+                            child: Text(
+                              pkg.packageName,
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: cs.onSurfaceVariant,
+                                fontFamily: 'monospace',
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                          const SizedBox(width: 4),
+                          MouseRegion(
+                            cursor: SystemMouseCursors.click,
+                            child: GestureDetector(
+                              onTap: () =>
+                                  _copy(pkg.packageName, 'Package name'),
+                              child: Container(
+                                padding: const EdgeInsets.all(2),
+                                child: Icon(
+                                  Icons.copy,
+                                  size: 14,
+                                  color: cs.onSurfaceVariant,
+                                ),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          _buildHeaderBadges(),
+                        ],
                       ),
-                    IconButton(
-                      icon: const Icon(Icons.copy),
-                      tooltip: 'Copy Permission',
-                      onPressed: () => _copy(permission, 'Permission'),
                     ),
                   ],
                 ),
-              );
+              ],
+            ),
+          ),
+          _buildQuickActions(),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPackageIcon() {
+    return PackageIcon(pkg: widget.package!, radius: 24);
+  }
+
+  Widget _buildQuickActions() {
+    final cs = Theme.of(context).colorScheme;
+    final pkg = widget.package!;
+    final isRunning = _isRunning ?? pkg.isRunning;
+
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        if (pkg.canLaunch) ...[
+          _buildActionButton(
+            isRunning ? 'Stop' : 'Start',
+            isRunning ? Icons.stop : Icons.play_arrow,
+            isRunning ? Colors.red : Colors.green,
+            () async {
+              final action = isRunning
+                  ? PackageAction.stop
+                  : PackageAction.start;
+              setState(() {
+                _isRunning = !isRunning;
+              });
+              try {
+                await widget.onPackageAction(action, pkg);
+                await Future.delayed(const Duration(milliseconds: 500));
+                _loadSection(
+                  'running',
+                  () => widget.repository.isPackageRunning(pkg.packageName),
+                );
+              } catch (e) {
+                if (mounted) {
+                  setState(() {
+                    _isRunning = isRunning;
+                  });
+                }
+              }
             },
+            isLoading: _sectionLoading['running'] == true,
+          ),
+          const SizedBox(width: 8),
+        ],
+        _buildActionButton(
+          'Clear Cache',
+          Icons.cached,
+          Colors.orange,
+          _clearCache,
+        ),
+        const SizedBox(width: 8),
+        _buildActionButton(
+          'Clear Data',
+          Icons.delete_sweep,
+          Colors.red,
+          _clearData,
+        ),
+        const SizedBox(width: 8),
+        _buildActionButton('Uninstall', Icons.delete, Colors.red, () async {
+          try {
+            await widget.onPackageAction(PackageAction.uninstall, pkg);
+            // Navigate back to list page after successful uninstall
+            if (mounted) {
+              widget.onBack();
+            }
+          } catch (e) {
+            // Error is already handled by the parent's onPackageAction
+          }
+        }),
+        const SizedBox(width: 8),
+        MouseRegion(
+          cursor: SystemMouseCursors.click,
+          child: Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: cs.surface,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: cs.outline.withAlpha(25)),
+            ),
+            child: GestureDetector(
+              onTap: _loadPackageData,
+              child: Icon(Icons.refresh, color: cs.primary, size: 20),
+            ),
           ),
         ),
       ],
     );
   }
 
-  Widget _buildComponentsTab() {
-    return DefaultTabController(
-      length: 4,
-      child: Column(
-        children: [
-          const TabBar(
-            tabs: [
-              Tab(text: 'Activities'),
-              Tab(text: 'Services'),
-              Tab(text: 'Receivers'),
-              Tab(text: 'Providers'),
-            ],
+  Widget _buildHeaderBadges() {
+    final pkg = widget.package!;
+    final isDebuggable = _isDebuggable;
+    final hasDebugCert =
+        _signatures?['signatures']?.first?['subject']?.contains('Debug') ??
+        false;
+
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        _buildBadge(
+          pkg.isSystemApp ? 'System' : 'User',
+          true,
+          pkg.isSystemApp ? Colors.orange : Colors.blue,
+          pkg.isSystemApp ? Icons.settings : Icons.person,
+        ),
+        SizedBox(width: 4),
+        if (isDebuggable != null)
+          _buildBadge(
+            'Debuggable',
+            isDebuggable,
+            isDebuggable ? Colors.red : Colors.green,
+            isDebuggable ? Icons.bug_report : Icons.verified_user,
           ),
-          Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              children: [
-                TextField(
-                  decoration: const InputDecoration(
-                    labelText: 'Filter components',
-                    prefixIcon: Icon(Icons.search),
-                    border: OutlineInputBorder(),
-                  ),
-                  onChanged: (value) => setState(() => _componentFilter = value),
-                ),
-                const SizedBox(height: 8),
-                CheckboxListTile(
-                  title: const Text('Show only exported (attack surface)'),
-                  value: _showOnlyExported,
-                  onChanged: (value) => setState(() => _showOnlyExported = value ?? false),
-                  dense: true,
-                ),
-              ],
-            ),
-          ),
-          Expanded(
-            child: TabBarView(
-              children: [
-                _buildActivitiesList(),
-                _buildServicesList(),
-                _buildReceiversList(),
-                _buildProvidersList(),
-              ],
-            ),
-          ),
+        if (isDebuggable != null) const SizedBox(width: 4),
+        if (hasDebugCert) ...[
+          _buildBadge('Debug Cert', true, Colors.red, Icons.warning),
         ],
+      ],
+    );
+  }
+
+  Widget _buildSearchBar() {
+    final cs = Theme.of(context).colorScheme;
+    
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        border: Border(bottom: BorderSide(color: cs.outline.withAlpha(25))),
+      ),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        decoration: BoxDecoration(
+          color: cs.surface,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: cs.outline.withAlpha(25)),
+        ),
+        child: Row(
+          children: [
+            Icon(
+              Icons.search,
+              color: cs.onSurfaceVariant,
+              size: 20,
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: TextField(
+                onChanged: (value) => setState(() => _searchQuery = value.toLowerCase()),
+                decoration: InputDecoration(
+                  hintText: 'Search package information...',
+                  border: InputBorder.none,
+                  contentPadding: EdgeInsets.zero,
+                  isDense: true,
+                  hintStyle: TextStyle(
+                    color: cs.onSurfaceVariant.withAlpha(150),
+                    fontSize: 14,
+                  ),
+                ),
+                style: const TextStyle(fontSize: 14),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
 
-  Widget _buildActivitiesList() {
-    if (details == null) return const SizedBox();
-    
-    var activities = details!.activities
-        .where((a) => _componentFilter.isEmpty || 
-            a.name.toLowerCase().contains(_componentFilter.toLowerCase()))
-        .where((a) => !_showOnlyExported || a.exported)
-        .toList();
 
-    return ListView.builder(
-      itemCount: activities.length,
-      itemBuilder: (context, index) {
-        final activity = activities[index];
-        return _buildComponentTile(
-          activity.name,
-          activity.exported,
-          activity.enabled,
-          activity.permission,
-          [
-            'Process: ${activity.processName}',
-            'Launch Mode: ${activity.launchMode}',
-            'Task Affinity: ${activity.taskAffinity}',
-          ],
-        );
-      },
-    );
-  }
-
-  Widget _buildServicesList() {
-    if (details == null) return const SizedBox();
-    
-    var services = details!.services
-        .where((s) => _componentFilter.isEmpty || 
-            s.name.toLowerCase().contains(_componentFilter.toLowerCase()))
-        .where((s) => !_showOnlyExported || s.exported)
-        .toList();
-
-    return ListView.builder(
-      itemCount: services.length,
-      itemBuilder: (context, index) {
-        final service = services[index];
-        return _buildComponentTile(
-          service.name,
-          service.exported,
-          service.enabled,
-          service.permission,
-          ['Process: ${service.processName}'],
-        );
-      },
-    );
-  }
-
-  Widget _buildReceiversList() {
-    if (details == null) return const SizedBox();
-    
-    var receivers = details!.receivers
-        .where((r) => _componentFilter.isEmpty || 
-            r.name.toLowerCase().contains(_componentFilter.toLowerCase()))
-        .where((r) => !_showOnlyExported || r.exported)
-        .toList();
-
-    return ListView.builder(
-      itemCount: receivers.length,
-      itemBuilder: (context, index) {
-        final receiver = receivers[index];
-        return _buildComponentTile(
-          receiver.name,
-          receiver.exported,
-          receiver.enabled,
-          receiver.permission,
-          ['Process: ${receiver.processName}'],
-        );
-      },
-    );
-  }
-
-  Widget _buildProvidersList() {
-    if (details == null) return const SizedBox();
-    
-    var providers = details!.providers
-        .where((p) => _componentFilter.isEmpty || 
-            p.name.toLowerCase().contains(_componentFilter.toLowerCase()) ||
-            p.authority.toLowerCase().contains(_componentFilter.toLowerCase()))
-        .where((p) => !_showOnlyExported || p.exported)
-        .toList();
-
-    return ListView.builder(
-      itemCount: providers.length,
-      itemBuilder: (context, index) {
-        final provider = providers[index];
-        return _buildComponentTile(
-          provider.name,
-          provider.exported,
-          provider.enabled,
-          null,
-          [
-            'Authority: ${provider.authority}',
-            'Process: ${provider.processName}',
-            'Grant URI Permissions: ${provider.grantUriPermissions}',
-          ],
-        );
-      },
-    );
-  }
-
-  Widget _buildComponentTile(
-    String name,
-    bool exported,
-    bool enabled,
-    String? permission,
-    List<String> details,
-  ) {
-    return Card(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-      child: ExpansionTile(
-        leading: Icon(
-          exported ? Icons.public : Icons.lock,
-          color: exported ? Colors.red : Colors.green,
+  Widget _buildVersionInstallSection() {
+    return _buildCollapsibleCard(
+      'Versions',
+      Icons.tag,
+      'version_install',
+      [
+        _buildInfoRow('Version', _details?['versionName'] ?? 'Unknown'),
+        _buildInfoRow(
+          'Version Code',
+          _details?['versionCode']?.toString() ?? 'Unknown',
         ),
-        title: Text(
-          name.split('.').last,
-          style: const TextStyle(fontWeight: FontWeight.bold),
+        _buildInfoRow(
+          'First Install',
+          _formatTimestamp(_details?['firstInstallTime']),
         ),
-        subtitle: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Exported: ${exported ? 'YES - ATTACK SURFACE' : 'No'}',
-              style: TextStyle(
-                color: exported ? Colors.red : Colors.green,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            if (permission != null)
-              Text('Permission: $permission', 
-                style: const TextStyle(fontStyle: FontStyle.italic)),
-          ],
+        _buildInfoRow(
+          'Last Update',
+          _formatTimestamp(_details?['lastUpdateTime']),
         ),
+      ],
+    );
+  }
+
+  Widget _buildTechnicalInfoSection() {
+    return _buildCollapsibleCard(
+      'Runtime',
+      Icons.developer_mode,
+      'technical_info',
+      [
+        _buildInfoRow(
+          'Target SDK',
+          _details?['applicationInfo']?['targetSdkVersion']?.toString() ??
+              'Unknown',
+        ),
+        _buildInfoRow(
+          'Min SDK',
+          _details?['applicationInfo']?['minSdkVersion']?.toString() ?? 'Unknown',
+        ),
+        _buildInfoRow(
+          'Compile SDK',
+          _details?['applicationInfo']?['compileSdkVersion']?.toString() ??
+              'Unknown',
+        ),
+        _buildInfoRow(
+          'UID',
+          _details?['applicationInfo']?['uid']?.toString() ?? 'Unknown',
+        ),
+      ],
+    );
+  }
+
+  Widget _buildSecurityInfoSection() {
+    final pkg = widget.package!;
+    final isDebuggable = _isDebuggable;
+    final hasDebugCert =
+        _signatures?['signatures']?.first?['subject']?.contains('Debug') ??
+        false;
+
+    return _buildCollapsibleCard(
+      'Security',
+      Icons.security,
+      'security_info',
+      [
+        _buildInfoRow(
+          'Debuggable',
+          isDebuggable != null ? (isDebuggable ? 'YES' : 'NO') : 'Unknown',
+        ),
+        _buildInfoRow('Debug Certificate', hasDebugCert ? 'YES' : 'NO'),
+        _buildInfoRow('System App', pkg.isSystemApp ? 'YES' : 'NO'),
+        _buildInfoRow(
+          'Enabled',
+          _details?['applicationInfo']?['enabled'] == true ? 'YES' : 'NO',
+        ),
+      ],
+    );
+  }
+
+  Widget _buildFileSystemInfoSection() {
+    return _buildCollapsibleCard(
+      'Filesystem',
+      Icons.folder_outlined,
+      'filesystem_info',
+      [
+        _buildPathRow(
+          'Data Dir',
+          _details?['applicationInfo']?['dataDir'],
+        ),
+        _buildPathRow(
+          'Native Lib Dir',
+          _details?['applicationInfo']?['nativeLibraryDir'],
+        ),
+        _buildPathRow(
+          'Source Dir',
+          _details?['applicationInfo']?['sourceDir'],
+        ),
+        _buildPathRow(
+          'Public Source',
+          _details?['applicationInfo']?['publicSourceDir'],
+        ),
+      ],
+    );
+  }
+
+  Widget _buildProcessInfoCard() {
+    final processData = _processInfo ?? {};
+    final running = processData['running']?.toString().toLowerCase() == 'true';
+
+    return _buildCollapsibleCard(
+      'Process',
+      Icons.memory,
+      'process_info',
+      !running ? [
+        const Center(
+          child: Padding(
+            padding: EdgeInsets.all(16),
+            child: Text('App is not currently running'),
+          ),
+        ),
+      ] : [
+        _buildInfoRow('PID', processData['pid']?.toString() ?? 'Unknown'),
+        _buildInfoRow('CPU Stats Available', processData['cpu_stat_available'] == true ? 'YES' : 'NO'),
+        _buildInfoRow('VM Peak', processData['VmPeak'] ?? 'Unknown'),
+        _buildInfoRow('VM Size', processData['VmSize'] ?? 'Unknown'),
+        _buildInfoRow('VM RSS', processData['VmRSS'] ?? 'Unknown'),
+      ],
+    );
+  }
+
+
+  Widget _buildActivitiesSection() {
+    final activities = List<Map<String, dynamic>>.from(_details?['activities'] ?? []);
+    
+    return _buildCollapsibleCard(
+      'Activities',
+      Icons.launch,
+      'activities',
+      activities.map((activity) => _buildComponentItem(activity, 'Activity')).toList(),
+      count: activities.length,
+    );
+  }
+
+  Widget _buildProvidersSection() {
+    final providers = List<Map<String, dynamic>>.from(_details?['providers'] ?? []);
+    
+    return _buildCollapsibleCard(
+      'Providers',
+      Icons.cloud_outlined,
+      'providers',
+      providers.map((provider) => _buildComponentItem(provider, 'Provider')).toList(),
+      count: providers.length,
+    );
+  }
+
+  Widget _buildReceiversSection() {
+    final receivers = List<Map<String, dynamic>>.from(_details?['receivers'] ?? []);
+    
+    return _buildCollapsibleCard(
+      'Receivers',
+      Icons.sensors,
+      'receivers',
+      receivers.map((receiver) => _buildComponentItem(receiver, 'Receiver')).toList(),
+      count: receivers.length,
+    );
+  }
+
+  Widget _buildComponentItem(Map<String, dynamic> component, String type) {
+    final cs = Theme.of(context).colorScheme;
+    final name = component['name'] ?? 'Unknown';
+    final exported = component['exported'] == true;
+    final enabled = component['enabled'] == true;
+    
+    return Container(
+      margin: const EdgeInsets.symmetric(vertical: 4),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: cs.surfaceContainerHigh,
+        borderRadius: BorderRadius.circular(6),
+        border: Border.all(color: cs.outline.withAlpha(15)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                SelectableText(
-                  name,
-                  style: const TextStyle(fontFamily: 'monospace', fontSize: 12),
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  name.split('.').last,
+                  style: const TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    fontFamily: 'monospace',
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
-                const SizedBox(height: 8),
-                ...details.map((detail) => Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 2),
-                  child: Text(detail, style: const TextStyle(fontSize: 12)),
-                )),
-                const SizedBox(height: 8),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.end,
-                  children: [
-                    TextButton.icon(
-                      onPressed: () => _copy(name, 'Component name'),
-                      icon: const Icon(Icons.copy, size: 16),
-                      label: const Text('Copy'),
+              ),
+              if (exported)
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                  decoration: BoxDecoration(
+                    color: Colors.red.withAlpha(25),
+                    borderRadius: BorderRadius.circular(3),
+                  ),
+                  child: const Text(
+                    'EXPORTED',
+                    style: TextStyle(
+                      fontSize: 8,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.red,
                     ),
-                  ],
+                  ),
                 ),
-              ],
+              const SizedBox(width: 4),
+              if (!enabled)
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                  decoration: BoxDecoration(
+                    color: Colors.red.withAlpha(25),
+                    borderRadius: BorderRadius.circular(3),
+                  ),
+                  child: const Text(
+                    'DISABLED',
+                    style: TextStyle(
+                      fontSize: 8,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.red,
+                    ),
+                  ),
+                ),
+            ],
+          ),
+          const SizedBox(height: 4),
+          Text(
+            name,
+            style: TextStyle(
+              fontSize: 11,
+              color: cs.onSurfaceVariant,
+              fontFamily: 'monospace',
             ),
           ),
         ],
@@ -555,136 +677,139 @@ class _PackageDetailsPageState extends State<PackageDetailsPage>
     );
   }
 
-  Widget _buildFileSystemTab() {
-    if (details == null) return const SizedBox();
-    
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        children: [
-          _buildInfoCard('APK & Installation', [
-            _buildInfoRow('Source Dir', details!.appInfo.sourceDir, copyable: true),
-            _buildInfoRow('Public Source Dir', details!.appInfo.publicSourceDir, copyable: true),
-          ]),
-          const SizedBox(height: 16),
-          _buildInfoCard('Data Directories', [
-            _buildInfoRow('Data Dir', details!.appInfo.dataDir, copyable: true),
-            _buildInfoRow('Native Library Dir', details!.appInfo.nativeLibraryDir, copyable: true),
-          ]),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildRuntimeTab() {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        children: [
-          _buildInfoCard('Runtime Status', [
-            _buildInfoRow('Running', isRunning ? 'YES - ACTIVE' : 'No',
-              color: isRunning ? Colors.green : Colors.grey),
-            _buildInfoRow('Process ID', processInfo?.pid?.toString() ?? 'Unknown'),
-            _buildInfoRow('Process Name', details?.appInfo.processName ?? 'Unknown'),
-            _buildInfoRow('UID', details?.appInfo.uid.toString() ?? 'Unknown'),
-            _buildInfoRow('Enabled', details?.appInfo.enabled == true ? 'Yes' : 'No'),
-          ]),
-          if (processInfo != null && processInfo!.running) ...[
-            const SizedBox(height: 16),
-            _buildInfoCard('Memory Usage', [
-              _buildInfoRow('Current RSS', processInfo!.memoryUsage, 
-                color: processInfo!.vmRss != null ? Colors.blue : null),
-              _buildInfoRow('Peak Memory', processInfo!.memoryPeak,
-                color: processInfo!.vmPeak != null ? Colors.orange : null),
-              _buildInfoRow('Virtual Size', processInfo!.memorySize,
-                color: processInfo!.vmSize != null ? Colors.purple : null),
-              _buildInfoRow('CPU Stats Available', processInfo!.cpuStatAvailable ? 'Yes' : 'No'),
-            ]),
-          ],
-          const SizedBox(height: 16),
-          Row(
-            children: [
-              Expanded(
-                child: ElevatedButton.icon(
-                  onPressed: isRunning 
-                      ? () => widget.onPackageAction(PackageAction.stop, widget.package!)
-                      : () => widget.onPackageAction(PackageAction.start, widget.package!),
-                  icon: Icon(isRunning ? Icons.stop : Icons.play_arrow),
-                  label: Text(isRunning ? 'Stop Package' : 'Start Package'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: isRunning ? Colors.red[100] : Colors.green[100],
-                  ),
-                ),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: ElevatedButton.icon(
-                  onPressed: () => _loadPackageData(),
-                  icon: const Icon(Icons.refresh),
-                  label: const Text('Refresh'),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          Row(
-            children: [
-              Expanded(
-                child: ElevatedButton.icon(
-                  onPressed: () => _showClearDataDialog(),
-                  icon: const Icon(Icons.delete_sweep),
-                  label: const Text('Clear Data'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.orange[100],
-                  ),
-                ),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: ElevatedButton.icon(
-                  onPressed: () => _showClearCacheDialog(),
-                  icon: const Icon(Icons.cached),
-                  label: const Text('Clear Cache'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.blue[100],
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildInfoCard(String title, List<Widget> children) {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              title,
-              style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            const SizedBox(height: 12),
-            ...children,
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildInfoRow(
-    String label, 
-    String? value, {
-    bool copyable = false, 
-    Color? color,
-    bool monospace = false,
+  Widget _buildCollapsibleCard(
+    String title,
+    IconData icon,
+    String sectionKey,
+    List<Widget> children, {
+    int? count,
   }) {
+    final cs = Theme.of(context).colorScheme;
+    final isExpanded = _expandedSections.contains(sectionKey);
+    
+    if (_searchQuery.isNotEmpty) {
+      final searchText = '$title ${children.toString()}'.toLowerCase();
+      if (!searchText.contains(_searchQuery)) {
+        return const SizedBox.shrink();
+      }
+    }
+
+    final displayTitle = count != null ? '$title ($count)' : title;
+
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
+      decoration: BoxDecoration(
+        color: cs.surface,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: cs.outline.withAlpha(25)),
+      ),
+      child: Column(
+        children: [
+          InkWell(
+            onTap: () => setState(() {
+              if (isExpanded) {
+                _expandedSections.remove(sectionKey);
+              } else {
+                _expandedSections.add(sectionKey);
+              }
+            }),
+            child: Padding(
+              padding: const EdgeInsets.all(12),
+              child: Row(
+                children: [
+                  Container(
+                    width: 32,
+                    height: 32,
+                    decoration: BoxDecoration(
+                      color: cs.primaryContainer,
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: Center(
+                      child: Icon(
+                        icon,
+                        size: 16,
+                        color: cs.onPrimaryContainer,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          displayTitle,
+                          style: const TextStyle(
+                            fontWeight: FontWeight.w600,
+                            fontSize: 14,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          '${children.length} ${children.length == 1 ? 'item' : 'items'}',
+                          style: TextStyle(
+                            fontSize: 11,
+                            color: cs.onSurfaceVariant,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Icon(
+                    isExpanded ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down,
+                    color: cs.onSurfaceVariant,
+                    size: 20,
+                  ),
+                ],
+              ),
+            ),
+          ),
+          if (isExpanded) ...[
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+              decoration: BoxDecoration(
+                color: cs.surfaceContainerHighest.withAlpha(25),
+                borderRadius: const BorderRadius.only(
+                  bottomLeft: Radius.circular(8),
+                  bottomRight: Radius.circular(8),
+                ),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Container(
+                    height: 1,
+                    color: cs.outline.withAlpha(25),
+                    margin: const EdgeInsets.only(bottom: 12),
+                  ),
+                  Text(
+                    '$title Details',
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: cs.primary,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  ...children,
+                ],
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPathRow(String label, String? path) {
+    if (path == null || path.isEmpty) return _buildInfoRow(label, 'Unknown');
+    
+    final cs = Theme.of(context).colorScheme;
+
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4),
       child: Row(
@@ -693,52 +818,444 @@ class _PackageDetailsPageState extends State<PackageDetailsPage>
           SizedBox(
             width: 120,
             child: Text(
-              '$label:',
-              style: const TextStyle(fontWeight: FontWeight.w500),
-            ),
-          ),
-          Expanded(
-            child: SelectableText(
-              value ?? 'Unknown',
+              label,
               style: TextStyle(
-                color: color,
-                fontFamily: monospace ? 'monospace' : null,
-                fontSize: monospace ? 12 : null,
+                fontWeight: FontWeight.w500,
+                fontSize: 13,
+                color: cs.onSurfaceVariant,
               ),
             ),
           ),
-          if (copyable && value != null)
-            IconButton(
-              onPressed: () => _copy(value, label),
-              icon: const Icon(Icons.copy, size: 16),
-              padding: EdgeInsets.zero,
-              constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+          Expanded(
+            child: MouseRegion(
+              cursor: SystemMouseCursors.click,
+              child: GestureDetector(
+                onTap: () => _openInFileExplorer(path),
+                child: Text(
+                  _formatPath(path),
+                  style: TextStyle(
+                    fontFamily: 'monospace',
+                    fontSize: 13,
+                    color: cs.primary,
+                    decoration: TextDecoration.underline,
+                  ),
+                ),
+              ),
             ),
+          ),
+          GestureDetector(
+            onTap: () => _openInFileExplorer(path),
+            child: Icon(
+              Icons.folder_open,
+              size: 14,
+              color: cs.primary,
+            ),
+          ),
         ],
       ),
     );
   }
 
-  String _formatDate(DateTime? date) {
-    if (date == null) return 'Unknown';
-    return '${date.day}/${date.month}/${date.year} ${date.hour}:${date.minute}';
+  void _openInFileExplorer(String path) {
+    context.go('/files?path=$path');
   }
 
-  Future<void> _showClearDataDialog() async {
+
+  Widget _buildBadge(String label, bool value, Color color, IconData icon) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: color.withAlpha(25),
+        borderRadius: BorderRadius.circular(6),
+        border: Border.all(color: color.withAlpha(0)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 8, color: color),
+          const SizedBox(width: 4),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 10,
+              fontWeight: FontWeight.w400,
+              color: color,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+
+
+  Widget _buildActionButton(
+    String label,
+    IconData? icon,
+    Color color,
+    VoidCallback? onTap, {
+    bool isLoading = false,
+  }) {
+    Widget iconChild;
+    if (isLoading) {
+      iconChild = SizedBox(
+        width: 16,
+        height: 16,
+        child: CircularProgressIndicator(strokeWidth: 2, color: color),
+      );
+    } else if (icon != null) {
+      iconChild = Icon(icon, size: 16, color: color);
+    } else {
+      iconChild = const SizedBox.shrink();
+    }
+
+    return FilledButton.tonalIcon(
+      onPressed: isLoading ? null : onTap,
+      style: ButtonStyle(
+        backgroundColor: WidgetStateProperty.resolveWith<Color?>((states) {
+          return color.withAlpha(25);
+        }),
+        shape: WidgetStateProperty.all(
+          RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(6),
+            side: BorderSide(color: color),
+          ),
+        ),
+        padding: WidgetStateProperty.all(
+          const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
+        ),
+        minimumSize: WidgetStateProperty.all(Size.zero),
+        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+      ),
+      icon: iconChild,
+      label: Text(
+        isLoading ? 'Loading...' : label,
+        style: TextStyle(
+          fontSize: 12,
+          fontWeight: FontWeight.w500,
+          color: color,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSignatureCard() {
+    final signatures = _signatures;
+    final signaturesList = signatures != null 
+        ? List<Map<String, dynamic>>.from(signatures['signatures'] ?? [])
+        : <Map<String, dynamic>>[];
+
+    final signatureWidgets = signatures == null
+        ? [const Center(child: CircularProgressIndicator())]
+        : signaturesList.map((sig) => Container(
+            margin: const EdgeInsets.symmetric(vertical: 4),
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Theme.of(context).colorScheme.surfaceContainerHigh,
+              borderRadius: BorderRadius.circular(6),
+              border: Border.all(color: Theme.of(context).colorScheme.outline.withAlpha(15)),
+            ),
+            child: Column(
+              children: [
+                _buildInfoRow('Algorithm', sig['algorithm'] ?? 'Unknown'),
+                _buildInfoRow('Subject', sig['subject'] ?? 'Unknown'),
+                _buildInfoRow('Issuer', sig['issuer'] ?? 'Unknown'),
+                _buildInfoRow('Valid From', sig['notBefore'] ?? 'Unknown'),
+                _buildInfoRow('Valid Until', sig['notAfter'] ?? 'Unknown'),
+                const SizedBox(height: 8),
+                _buildInfoRow('MD5', sig['md5'] ?? 'Unknown'),
+                _buildInfoRow('SHA1', sig['sha1'] ?? 'Unknown'),
+                _buildInfoRow('SHA256', sig['sha256'] ?? 'Unknown'),
+              ],
+            ),
+          )).toList();
+
+    return _buildCollapsibleCard(
+      'Signatures',
+      Icons.verified_user,
+      'signatures',
+      signatureWidgets,
+      count: signatures != null ? (signatures['signatureCount'] ?? 0) : null,
+    );
+  }
+
+  Widget _buildPermissionsCard() {
+    final permissions = _permissions;
+
+    return _buildCollapsibleCard(
+      'Permissions',
+      Icons.lock,
+      'permissions',
+      permissions == null ? [
+        const Center(child: CircularProgressIndicator()),
+      ] : List<String>.from(permissions['all'] ?? []).map((perm) {
+        final isGranted = Set<String>.from(
+          permissions['granted'] ?? [],
+        ).contains(perm);
+        return _buildPermissionRow(perm, isGranted);
+      }).toList(),
+      count: permissions != null ? List<String>.from(permissions['all'] ?? []).length : null,
+    );
+  }
+
+  Widget _buildPermissionRow(
+    String permission,
+    bool isGranted,
+  ) {
+    final cs = Theme.of(context).colorScheme;
+    final color = isGranted ? Colors.green : Colors.grey;
+
+    return Container(
+      margin: const EdgeInsets.symmetric(vertical: 2),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: cs.surfaceContainerHigh,
+        borderRadius: BorderRadius.circular(6),
+        border: Border.all(color: cs.outline.withAlpha(15)),
+      ),
+      child: Row(
+        children: [
+          Icon(
+            isGranted ? Icons.check_circle : Icons.cancel,
+            size: 16,
+            color: color,
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  permission.split('.').last,
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontFamily: 'monospace',
+                    fontWeight: FontWeight.w600,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  permission,
+                  style: TextStyle(
+                    fontSize: 11,
+                    color: cs.onSurfaceVariant,
+                    fontFamily: 'monospace',
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 8),
+          _buildPermissionActionButton(
+            permission,
+            isGranted,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPermissionActionButton(
+    String permission,
+    bool isGranted,
+  ) {
+    final isLoading = _sectionLoading['perm_$permission'] == true;
+    final buttonColor = isGranted ? Colors.red : Colors.green;
+    final buttonText = isGranted ? 'Revoke' : 'Grant';
+    final buttonIcon = isGranted ? Icons.block : Icons.check;
+
+    return MouseRegion(
+      cursor: SystemMouseCursors.click,
+      child: GestureDetector(
+        onTap: isLoading ? null : () => _togglePermission(permission, isGranted),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+          decoration: BoxDecoration(
+            color: buttonColor.withAlpha(25),
+            borderRadius: BorderRadius.circular(4),
+            border: Border.all(color: buttonColor.withAlpha(50)),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (isLoading)
+                SizedBox(
+                  width: 12,
+                  height: 12,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    valueColor: AlwaysStoppedAnimation<Color>(buttonColor),
+                  ),
+                )
+              else
+                Icon(
+                  buttonIcon,
+                  size: 12,
+                  color: buttonColor,
+                ),
+              const SizedBox(width: 4),
+              Text(
+                buttonText,
+                style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w600,
+                  color: buttonColor,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _togglePermission(String permission, bool isCurrentlyGranted) async {
+    if (widget.package == null) return;
+
+    setState(() {
+      _sectionLoading['perm_$permission'] = true;
+      _sectionErrors['perm_$permission'] = null;
+    });
+
+    try {
+      final packageName = widget.package!.packageName;
+      
+      if (isCurrentlyGranted) {
+        await widget.repository.revokePermission(packageName, permission);
+      } else {
+        await widget.repository.grantPermission(packageName, permission);
+      }
+
+      _loadSection(
+        'permissions',
+        () => widget.repository.getAllPermissions(packageName),
+      );
+
+      if (mounted) {
+        context.showSuccessSnackBar(
+          '${isCurrentlyGranted ? 'Revoked' : 'Granted'} $permission',
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _sectionErrors['perm_$permission'] = e.toString();
+        });
+        context.showErrorSnackBar(e.toString());
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _sectionLoading['perm_$permission'] = false;
+        });
+      }
+    }
+  }
+
+
+
+  Widget _buildInfoRow(String label, String value) {
+    final cs = Theme.of(context).colorScheme;
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: InkWell(
+        onTap: () => _copy('$label: $value', label),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            SizedBox(
+              width: 120,
+              child: Text(
+                label,
+                style: TextStyle(
+                  fontWeight: FontWeight.w500,
+                  fontSize: 13,
+                  color: cs.onSurfaceVariant,
+                ),
+              ),
+            ),
+            Expanded(
+              child: Text(
+                value,
+                style: const TextStyle(
+                  fontFamily: 'monospace',
+                  fontSize: 13,
+                ),
+              ),
+            ),
+            Icon(
+              Icons.copy,
+              size: 14,
+              color: cs.onSurfaceVariant,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+
+  String _formatTimestamp(dynamic timestamp) {
+    if (timestamp == null) return 'Unknown';
+    try {
+      final date = DateTime.fromMillisecondsSinceEpoch(timestamp as int);
+      return '${date.day}/${date.month}/${date.year}';
+    } catch (e) {
+      return 'Unknown';
+    }
+  }
+
+  String _formatPath(String? path) {
+    if (path == null || path.isEmpty) return 'Unknown';
+    // Shorten long paths for better display
+    if (path.length > 40) {
+      final parts = path.split('/');
+      if (parts.length > 3) {
+        return '.../${parts[parts.length - 2]}/${parts.last}';
+      }
+    }
+    return path;
+  }
+
+  void _copy(String text, String label) {
+    Clipboard.setData(ClipboardData(text: text));
+    context.showInfoSnackBar('$label copied to clipboard');
+  }
+
+  Future<void> _clearCache() async {
+    try {
+      await widget.repository.clearPackageCache(widget.package!.packageName);
+      if (mounted) {
+        context.showSuccessSnackBar('Cache cleared successfully');
+      }
+    } catch (e) {
+      if (mounted) {
+        context.showErrorSnackBar(e.toString());
+      }
+    }
+  }
+
+  Future<void> _clearData() async {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Clear Package Data'),
-        content: Text('Are you sure you want to clear all data for ${widget.package!.name}?\n\nThis will remove all app data including settings, accounts, databases, etc. This action cannot be undone.'),
+        title: const Text('Clear Data'),
+        content: Text(
+          'Are you sure you want to clear all data for ${widget.package!.name}?',
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
             child: const Text('Cancel'),
           ),
           FilledButton(
-            style: FilledButton.styleFrom(backgroundColor: Colors.orange),
             onPressed: () => Navigator.pop(context, true),
-            child: const Text('Clear Data'),
+            child: const Text('Clear'),
           ),
         ],
       ),
@@ -748,96 +1265,11 @@ class _PackageDetailsPageState extends State<PackageDetailsPage>
       try {
         await widget.repository.clearPackageData(widget.package!.packageName);
         if (mounted) {
-          context.showSuccessSnackBar('Cleared data for ${widget.package!.name}');
-          await _loadPackageData();
+          context.showSuccessSnackBar('Data cleared successfully');
         }
       } catch (e) {
         if (mounted) {
-          context.showErrorSnackBar('Failed to clear data: $e');
-        }
-      }
-    }
-  }
-
-  Future<void> _showClearCacheDialog() async {
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Clear Package Cache'),
-        content: Text('Are you sure you want to clear the cache for ${widget.package!.name}?\n\nThis will remove temporary files but preserve app data and settings.'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancel'),
-          ),
-          FilledButton(
-            style: FilledButton.styleFrom(backgroundColor: Colors.blue),
-            onPressed: () => Navigator.pop(context, true),
-            child: const Text('Clear Cache'),
-          ),
-        ],
-      ),
-    );
-
-    if (confirmed == true && mounted) {
-      try {
-        await widget.repository.clearPackageCache(widget.package!.packageName);
-        if (mounted) {
-          context.showSuccessSnackBar('Cleared cache for ${widget.package!.name}');
-          await _loadPackageData();
-        }
-      } catch (e) {
-        if (mounted) {
-          context.showErrorSnackBar('Failed to clear cache: $e');
-        }
-      }
-    }
-  }
-
-  Future<void> _grantPermission(String permission) async {
-    try {
-      await widget.repository.grantPermission(widget.package!.packageName, permission);
-      if (mounted) {
-        context.showSuccessSnackBar('Granted permission: $permission');
-        await _loadPackageData();
-      }
-    } catch (e) {
-      if (mounted) {
-        context.showErrorSnackBar('Failed to grant permission: $e');
-      }
-    }
-  }
-
-  Future<void> _revokePermission(String permission) async {
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Revoke Permission'),
-        content: Text('Are you sure you want to revoke this dangerous permission?\n\n$permission\n\nThis may cause the app to malfunction.'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancel'),
-          ),
-          FilledButton(
-            style: FilledButton.styleFrom(backgroundColor: Colors.red),
-            onPressed: () => Navigator.pop(context, true),
-            child: const Text('Revoke'),
-          ),
-        ],
-      ),
-    );
-
-    if (confirmed == true && mounted) {
-      try {
-        await widget.repository.revokePermission(widget.package!.packageName, permission);
-        if (mounted) {
-          context.showSuccessSnackBar('Revoked permission: $permission');
-          await _loadPackageData();
-        }
-      } catch (e) {
-        if (mounted) {
-          context.showErrorSnackBar('Failed to revoke permission: $e');
+          context.showErrorSnackBar(e.toString());
         }
       }
     }

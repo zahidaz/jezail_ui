@@ -47,10 +47,10 @@ class PackageService {
   }
 
   Future<dynamic> grantPermission(String package, String permission) =>
-      _api.post('/package/$package/permissions/grant?permission=$permission');
+      _api.post('/package/$package/permissions/grant?permission=$permission', body: {});
            
   Future<dynamic> revokePermission(String package, String permission) =>
-      _api.post('/package/$package/permissions/revoke?permission=$permission');
+      _api.post('/package/$package/permissions/revoke?permission=$permission', body: {});
 
   Future<dynamic> getPackagePermissions(String package) => _api.get('/package/$package/permissions');
   

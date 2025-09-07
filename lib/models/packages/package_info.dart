@@ -22,6 +22,30 @@ class PackageInfo {
     this.isDebuggable,
   });
 
+  PackageInfo copyWith({
+    String? packageName,
+    String? name,
+    String? iconBase64,
+    bool? isRunning,
+    bool? canLaunch,
+    bool? isSystemApp,
+    bool? isUpdatedSystemApp,
+    String? version,
+    bool? isDebuggable,
+  }) {
+    return PackageInfo(
+      packageName: packageName ?? this.packageName,
+      name: name ?? this.name,
+      iconBase64: iconBase64 ?? this.iconBase64,
+      isRunning: isRunning ?? this.isRunning,
+      canLaunch: canLaunch ?? this.canLaunch,
+      isSystemApp: isSystemApp ?? this.isSystemApp,
+      isUpdatedSystemApp: isUpdatedSystemApp ?? this.isUpdatedSystemApp,
+      version: version ?? this.version,
+      isDebuggable: isDebuggable ?? this.isDebuggable,
+    );
+  }
+
   factory PackageInfo.fromJson(Map<String, dynamic> json) {
     return PackageInfo(
       packageName: json['packageName'] ?? '',

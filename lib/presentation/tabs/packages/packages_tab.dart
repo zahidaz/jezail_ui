@@ -20,6 +20,26 @@ typedef PackageTabState = ({
   PackageInfo? selectedPackage,
 });
 
+extension PackageTabStateExtension on PackageTabState {
+  PackageTabState copyWith({
+    List<PackageInfo>? packages,
+    bool? isLoading,
+    String? error,
+    String? searchQuery,
+    AppTypeFilter? filter,
+    PackageInfo? selectedPackage,
+  }) {
+    return (
+      packages: packages ?? this.packages,
+      isLoading: isLoading ?? this.isLoading,
+      error: error ?? this.error,
+      searchQuery: searchQuery ?? this.searchQuery,
+      filter: filter ?? this.filter,
+      selectedPackage: selectedPackage ?? this.selectedPackage,
+    );
+  }
+}
+
 class PackagesTab extends StatefulWidget {
   const PackagesTab({super.key, required this.packageRepository});
 
@@ -62,25 +82,15 @@ class PackagesTabState extends State<PackagesTab> {
   Future<void> _loadPackages() async {
     if (_hasLoaded) return;
     
-    _updateState((s) => (
-      packages: s.packages,
-      isLoading: true,
-      error: null,
-      searchQuery: s.searchQuery,
-      filter: s.filter,
-      selectedPackage: s.selectedPackage,
-    ));
+    _updateState((s) => s.copyWith(isLoading: true, error: null));
 
     try {
       final packages = await widget.packageRepository.getAllPackages();
       _hasLoaded = true;
-      _updateState((s) => (
+      _updateState((s) => s.copyWith(
         packages: packages,
         isLoading: false,
         error: null,
-        searchQuery: s.searchQuery,
-        filter: s.filter,
-        selectedPackage: s.selectedPackage,
       ));
     } catch (e) {
       _updateState((s) => (
@@ -102,21 +112,41 @@ class PackagesTabState extends State<PackagesTab> {
   Future<void> _handlePackageAction(PackageAction action, PackageInfo pkg) async {
     switch (action) {
       case PackageAction.start:
-        await context.runWithFeedback(
-          action: () => widget.packageRepository.launchPackage(pkg.packageName),
-          successMessage: 'Started ${pkg.name}',
-          errorMessage: 'Failed to start ${pkg.name}',
-        );
+        try {
+          await widget.packageRepository.launchPackage(pkg.packageName);
+          if (mounted) context.showSuccessSnackBar('Started ${pkg.name}');
+          await Future.delayed(const Duration(milliseconds: 500));
+          await _updatePackageRunningStatus(pkg.packageName);
+        } catch (e) {
+          if (mounted) context.showErrorSnackBar('Failed to start ${pkg.name}');
+        }
       case PackageAction.stop:
-        await context.runWithFeedback(
-          action: () => widget.packageRepository.stopPackage(pkg.packageName),
-          successMessage: 'Stopped ${pkg.name}',
-          errorMessage: 'Failed to stop ${pkg.name}',
-        );
+        try {
+          await widget.packageRepository.stopPackage(pkg.packageName);
+          if (mounted) context.showSuccessSnackBar('Stopped ${pkg.name}');
+          await _updatePackageRunningStatus(pkg.packageName);
+        } catch (e) {
+          if (mounted) context.showErrorSnackBar('Failed to stop ${pkg.name}');
+        }
       case PackageAction.details:
         await _showPackageDetails(pkg);
       case PackageAction.uninstall:
         await _uninstallPackage(pkg);
+    }
+  }
+
+  Future<void> _updatePackageRunningStatus(String packageName) async {
+    try {
+      final isRunning = await widget.packageRepository.isPackageRunning(packageName);
+      final updatedPackages = _state.packages.map((pkg) => 
+        pkg.packageName == packageName 
+          ? pkg.copyWith(isRunning: isRunning)
+          : pkg
+      ).toList();
+      
+      _updateState((s) => s.copyWith(packages: updatedPackages));
+    } catch (e) {
+      await _refreshPackages();
     }
   }
 
@@ -217,6 +247,8 @@ class PackagesTabState extends State<PackagesTab> {
       AppTypeFilter.all => true,
       AppTypeFilter.user => !pkg.isSystemApp,
       AppTypeFilter.system => pkg.isSystemApp,
+      AppTypeFilter.launchable => pkg.canLaunch,
+      AppTypeFilter.running => pkg.isRunning,
     };
     
     return matchesSearch && matchesFilter;
