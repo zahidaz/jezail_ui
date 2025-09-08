@@ -130,41 +130,41 @@ class _PackageDetailsPageState extends State<PackageDetailsPage> {
     }
 
     return Column(
-        children: [
-          _buildHeader(),
-          _buildSearchBar(),
-          Expanded(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _buildSignatureCard(),
+      children: [
+        _buildHeader(),
+        _buildSearchBar(),
+        Expanded(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _buildFileSystemInfoSection(),
+                const SizedBox(height: 16),
+                _buildPermissionsCard(),
+                const SizedBox(height: 16),
+                _buildActivitiesSection(),
+                const SizedBox(height: 16),
+                _buildReceiversSection(),
+                const SizedBox(height: 16),
+                _buildProvidersSection(),
+                const SizedBox(height: 16),
+                _buildSignatureCard(),
+                const SizedBox(height: 16),
+                _buildSecurityInfoSection(),
+                const SizedBox(height: 16),
+                _buildVersionInstallSection(),
+                const SizedBox(height: 16),
+                _buildTechnicalInfoSection(),
+                if (_processInfo != null && _isRunning == true) ...[
                   const SizedBox(height: 16),
-                  _buildPermissionsCard(),
-                  const SizedBox(height: 16),
-                  _buildActivitiesSection(),
-                  const SizedBox(height: 16),
-                  _buildReceiversSection(),
-                  const SizedBox(height: 16),
-                  _buildProvidersSection(),
-                  const SizedBox(height: 16),
-                  if (_processInfo != null && _isRunning == true) ...[
-                    _buildProcessInfoCard(),
-                    const SizedBox(height: 16),
-                  ],
-                  _buildSecurityInfoSection(),
-                  const SizedBox(height: 16),
-                  _buildVersionInstallSection(),
-                  const SizedBox(height: 16),
-                  _buildTechnicalInfoSection(),
-                  const SizedBox(height: 16),
-                  _buildFileSystemInfoSection(),
+                  _buildProcessInfoCard(),
                 ],
-              ),
+              ],
             ),
           ),
-        ],
+        ),
+      ],
     );
   }
 
@@ -388,7 +388,7 @@ class _PackageDetailsPageState extends State<PackageDetailsPage> {
 
   Widget _buildSearchBar() {
     final cs = Theme.of(context).colorScheme;
-    
+
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -403,15 +403,12 @@ class _PackageDetailsPageState extends State<PackageDetailsPage> {
         ),
         child: Row(
           children: [
-            Icon(
-              Icons.search,
-              color: cs.onSurfaceVariant,
-              size: 20,
-            ),
+            Icon(Icons.search, color: cs.onSurfaceVariant, size: 20),
             const SizedBox(width: 12),
             Expanded(
               child: TextField(
-                onChanged: (value) => setState(() => _searchQuery = value.toLowerCase()),
+                onChanged: (value) =>
+                    setState(() => _searchQuery = value.toLowerCase()),
                 decoration: InputDecoration(
                   hintText: 'Search package information...',
                   border: InputBorder.none,
@@ -431,28 +428,22 @@ class _PackageDetailsPageState extends State<PackageDetailsPage> {
     );
   }
 
-
   Widget _buildVersionInstallSection() {
-    return _buildCollapsibleCard(
-      'Versions',
-      Icons.tag,
-      'version_install',
-      [
-        _buildInfoRow('Version', _details?['versionName'] ?? 'Unknown'),
-        _buildInfoRow(
-          'Version Code',
-          _details?['versionCode']?.toString() ?? 'Unknown',
-        ),
-        _buildInfoRow(
-          'First Install',
-          _formatTimestamp(_details?['firstInstallTime']),
-        ),
-        _buildInfoRow(
-          'Last Update',
-          _formatTimestamp(_details?['lastUpdateTime']),
-        ),
-      ],
-    );
+    return _buildCollapsibleCard('Versions', Icons.tag, 'version_install', [
+      _buildInfoRow('Version', _details?['versionName'] ?? 'Unknown'),
+      _buildInfoRow(
+        'Version Code',
+        _details?['versionCode']?.toString() ?? 'Unknown',
+      ),
+      _buildInfoRow(
+        'First Install',
+        _formatTimestamp(_details?['firstInstallTime']),
+      ),
+      _buildInfoRow(
+        'Last Update',
+        _formatTimestamp(_details?['lastUpdateTime']),
+      ),
+    ]);
   }
 
   Widget _buildTechnicalInfoSection() {
@@ -468,7 +459,8 @@ class _PackageDetailsPageState extends State<PackageDetailsPage> {
         ),
         _buildInfoRow(
           'Min SDK',
-          _details?['applicationInfo']?['minSdkVersion']?.toString() ?? 'Unknown',
+          _details?['applicationInfo']?['minSdkVersion']?.toString() ??
+              'Unknown',
         ),
         _buildInfoRow(
           'Compile SDK',
@@ -490,23 +482,18 @@ class _PackageDetailsPageState extends State<PackageDetailsPage> {
         _signatures?['signatures']?.first?['subject']?.contains('Debug') ??
         false;
 
-    return _buildCollapsibleCard(
-      'Security',
-      Icons.security,
-      'security_info',
-      [
-        _buildInfoRow(
-          'Debuggable',
-          isDebuggable != null ? (isDebuggable ? 'YES' : 'NO') : 'Unknown',
-        ),
-        _buildInfoRow('Debug Certificate', hasDebugCert ? 'YES' : 'NO'),
-        _buildInfoRow('System App', pkg.isSystemApp ? 'YES' : 'NO'),
-        _buildInfoRow(
-          'Enabled',
-          _details?['applicationInfo']?['enabled'] == true ? 'YES' : 'NO',
-        ),
-      ],
-    );
+    return _buildCollapsibleCard('Security', Icons.security, 'security_info', [
+      _buildInfoRow(
+        'Debuggable',
+        isDebuggable != null ? (isDebuggable ? 'YES' : 'NO') : 'Unknown',
+      ),
+      _buildInfoRow('Debug Certificate', hasDebugCert ? 'YES' : 'NO'),
+      _buildInfoRow('System App', pkg.isSystemApp ? 'YES' : 'NO'),
+      _buildInfoRow(
+        'Enabled',
+        _details?['applicationInfo']?['enabled'] == true ? 'YES' : 'NO',
+      ),
+    ]);
   }
 
   Widget _buildFileSystemInfoSection() {
@@ -515,18 +502,12 @@ class _PackageDetailsPageState extends State<PackageDetailsPage> {
       Icons.folder_outlined,
       'filesystem_info',
       [
-        _buildPathRow(
-          'Data Dir',
-          _details?['applicationInfo']?['dataDir'],
-        ),
+        _buildPathRow('Data Dir', _details?['applicationInfo']?['dataDir']),
         _buildPathRow(
           'Native Lib Dir',
           _details?['applicationInfo']?['nativeLibraryDir'],
         ),
-        _buildPathRow(
-          'Source Dir',
-          _details?['applicationInfo']?['sourceDir'],
-        ),
+        _buildPathRow('Source Dir', _details?['applicationInfo']?['sourceDir']),
         _buildPathRow(
           'Public Source',
           _details?['applicationInfo']?['publicSourceDir'],
@@ -543,56 +524,72 @@ class _PackageDetailsPageState extends State<PackageDetailsPage> {
       'Process',
       Icons.memory,
       'process_info',
-      !running ? [
-        const Center(
-          child: Padding(
-            padding: EdgeInsets.all(16),
-            child: Text('App is not currently running'),
-          ),
-        ),
-      ] : [
-        _buildInfoRow('PID', processData['pid']?.toString() ?? 'Unknown'),
-        _buildInfoRow('CPU Stats Available', processData['cpu_stat_available'] == true ? 'YES' : 'NO'),
-        _buildInfoRow('VM Peak', processData['VmPeak'] ?? 'Unknown'),
-        _buildInfoRow('VM Size', processData['VmSize'] ?? 'Unknown'),
-        _buildInfoRow('VM RSS', processData['VmRSS'] ?? 'Unknown'),
-      ],
+      !running
+          ? [
+              const Center(
+                child: Padding(
+                  padding: EdgeInsets.all(16),
+                  child: Text('App is not currently running'),
+                ),
+              ),
+            ]
+          : [
+              _buildInfoRow('PID', processData['pid']?.toString() ?? 'Unknown'),
+              _buildInfoRow(
+                'CPU Stats Available',
+                processData['cpu_stat_available'] == true ? 'YES' : 'NO',
+              ),
+              _buildInfoRow('VM Peak', processData['VmPeak'] ?? 'Unknown'),
+              _buildInfoRow('VM Size', processData['VmSize'] ?? 'Unknown'),
+              _buildInfoRow('VM RSS', processData['VmRSS'] ?? 'Unknown'),
+            ],
     );
   }
 
-
   Widget _buildActivitiesSection() {
-    final activities = List<Map<String, dynamic>>.from(_details?['activities'] ?? []);
-    
+    final activities = List<Map<String, dynamic>>.from(
+      _details?['activities'] ?? [],
+    );
+
     return _buildCollapsibleCard(
       'Activities',
       Icons.launch,
       'activities',
-      activities.map((activity) => _buildComponentItem(activity, 'Activity')).toList(),
+      activities
+          .map((activity) => _buildComponentItem(activity, 'Activity'))
+          .toList(),
       count: activities.length,
     );
   }
 
   Widget _buildProvidersSection() {
-    final providers = List<Map<String, dynamic>>.from(_details?['providers'] ?? []);
-    
+    final providers = List<Map<String, dynamic>>.from(
+      _details?['providers'] ?? [],
+    );
+
     return _buildCollapsibleCard(
       'Providers',
       Icons.cloud_outlined,
       'providers',
-      providers.map((provider) => _buildComponentItem(provider, 'Provider')).toList(),
+      providers
+          .map((provider) => _buildComponentItem(provider, 'Provider'))
+          .toList(),
       count: providers.length,
     );
   }
 
   Widget _buildReceiversSection() {
-    final receivers = List<Map<String, dynamic>>.from(_details?['receivers'] ?? []);
-    
+    final receivers = List<Map<String, dynamic>>.from(
+      _details?['receivers'] ?? [],
+    );
+
     return _buildCollapsibleCard(
       'Receivers',
       Icons.sensors,
       'receivers',
-      receivers.map((receiver) => _buildComponentItem(receiver, 'Receiver')).toList(),
+      receivers
+          .map((receiver) => _buildComponentItem(receiver, 'Receiver'))
+          .toList(),
       count: receivers.length,
     );
   }
@@ -602,7 +599,7 @@ class _PackageDetailsPageState extends State<PackageDetailsPage> {
     final name = component['name'] ?? 'Unknown';
     final exported = component['exported'] == true;
     final enabled = component['enabled'] == true;
-    
+
     return Container(
       margin: const EdgeInsets.symmetric(vertical: 4),
       padding: const EdgeInsets.all(12),
@@ -630,7 +627,10 @@ class _PackageDetailsPageState extends State<PackageDetailsPage> {
               ),
               if (exported)
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 4,
+                    vertical: 1,
+                  ),
                   decoration: BoxDecoration(
                     color: Colors.red.withAlpha(25),
                     borderRadius: BorderRadius.circular(3),
@@ -647,7 +647,10 @@ class _PackageDetailsPageState extends State<PackageDetailsPage> {
               const SizedBox(width: 4),
               if (!enabled)
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 4,
+                    vertical: 1,
+                  ),
                   decoration: BoxDecoration(
                     color: Colors.red.withAlpha(25),
                     borderRadius: BorderRadius.circular(3),
@@ -686,7 +689,7 @@ class _PackageDetailsPageState extends State<PackageDetailsPage> {
   }) {
     final cs = Theme.of(context).colorScheme;
     final isExpanded = _expandedSections.contains(sectionKey);
-    
+
     if (_searchQuery.isNotEmpty) {
       final searchText = '$title ${children.toString()}'.toLowerCase();
       if (!searchText.contains(_searchQuery)) {
@@ -725,11 +728,7 @@ class _PackageDetailsPageState extends State<PackageDetailsPage> {
                       borderRadius: BorderRadius.circular(6),
                     ),
                     child: Center(
-                      child: Icon(
-                        icon,
-                        size: 16,
-                        color: cs.onPrimaryContainer,
-                      ),
+                      child: Icon(icon, size: 16, color: cs.onPrimaryContainer),
                     ),
                   ),
                   const SizedBox(width: 10),
@@ -759,7 +758,9 @@ class _PackageDetailsPageState extends State<PackageDetailsPage> {
                   ),
                   const SizedBox(width: 8),
                   Icon(
-                    isExpanded ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down,
+                    isExpanded
+                        ? Icons.keyboard_arrow_up
+                        : Icons.keyboard_arrow_down,
                     color: cs.onSurfaceVariant,
                     size: 20,
                   ),
@@ -807,7 +808,7 @@ class _PackageDetailsPageState extends State<PackageDetailsPage> {
 
   Widget _buildPathRow(String label, String? path) {
     if (path == null || path.isEmpty) return _buildInfoRow(label, 'Unknown');
-    
+
     final cs = Theme.of(context).colorScheme;
 
     return Padding(
@@ -845,11 +846,7 @@ class _PackageDetailsPageState extends State<PackageDetailsPage> {
           ),
           GestureDetector(
             onTap: () => _openInFileExplorer(path),
-            child: Icon(
-              Icons.folder_open,
-              size: 14,
-              color: cs.primary,
-            ),
+            child: Icon(Icons.folder_open, size: 14, color: cs.primary),
           ),
         ],
       ),
@@ -859,7 +856,6 @@ class _PackageDetailsPageState extends State<PackageDetailsPage> {
   void _openInFileExplorer(String path) {
     context.go('/files?path=$path');
   }
-
 
   Widget _buildBadge(String label, bool value, Color color, IconData icon) {
     return Container(
@@ -886,8 +882,6 @@ class _PackageDetailsPageState extends State<PackageDetailsPage> {
       ),
     );
   }
-
-
 
   Widget _buildActionButton(
     String label,
@@ -941,34 +935,48 @@ class _PackageDetailsPageState extends State<PackageDetailsPage> {
 
   Widget _buildSignatureCard() {
     final signatures = _signatures;
-    final signaturesList = signatures != null 
+    final signaturesList = signatures != null
         ? List<Map<String, dynamic>>.from(signatures['signatures'] ?? [])
         : <Map<String, dynamic>>[];
 
     final signatureWidgets = signatures == null
         ? [const Center(child: CircularProgressIndicator())]
-        : signaturesList.map((sig) => Container(
-            margin: const EdgeInsets.symmetric(vertical: 4),
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: Theme.of(context).colorScheme.surfaceContainerHigh,
-              borderRadius: BorderRadius.circular(6),
-              border: Border.all(color: Theme.of(context).colorScheme.outline.withAlpha(15)),
-            ),
-            child: Column(
-              children: [
-                _buildInfoRow('Algorithm', sig['algorithm'] ?? 'Unknown'),
-                _buildInfoRow('Subject', sig['subject'] ?? 'Unknown'),
-                _buildInfoRow('Issuer', sig['issuer'] ?? 'Unknown'),
-                _buildInfoRow('Valid From', sig['notBefore'] ?? 'Unknown'),
-                _buildInfoRow('Valid Until', sig['notAfter'] ?? 'Unknown'),
-                const SizedBox(height: 8),
-                _buildInfoRow('MD5', sig['md5'] ?? 'Unknown'),
-                _buildInfoRow('SHA1', sig['sha1'] ?? 'Unknown'),
-                _buildInfoRow('SHA256', sig['sha256'] ?? 'Unknown'),
-              ],
-            ),
-          )).toList();
+        : signaturesList
+              .map(
+                (sig) => Container(
+                  margin: const EdgeInsets.symmetric(vertical: 4),
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).colorScheme.surfaceContainerHigh,
+                    borderRadius: BorderRadius.circular(6),
+                    border: Border.all(
+                      color: Theme.of(
+                        context,
+                      ).colorScheme.outline.withAlpha(15),
+                    ),
+                  ),
+                  child: Column(
+                    children: [
+                      _buildInfoRow('Algorithm', sig['algorithm'] ?? 'Unknown'),
+                      _buildInfoRow('Subject', sig['subject'] ?? 'Unknown'),
+                      _buildInfoRow('Issuer', sig['issuer'] ?? 'Unknown'),
+                      _buildInfoRow(
+                        'Valid From',
+                        sig['notBefore'] ?? 'Unknown',
+                      ),
+                      _buildInfoRow(
+                        'Valid Until',
+                        sig['notAfter'] ?? 'Unknown',
+                      ),
+                      const SizedBox(height: 8),
+                      _buildInfoRow('MD5', sig['md5'] ?? 'Unknown'),
+                      _buildInfoRow('SHA1', sig['sha1'] ?? 'Unknown'),
+                      _buildInfoRow('SHA256', sig['sha256'] ?? 'Unknown'),
+                    ],
+                  ),
+                ),
+              )
+              .toList();
 
     return _buildCollapsibleCard(
       'Signatures',
@@ -986,22 +994,21 @@ class _PackageDetailsPageState extends State<PackageDetailsPage> {
       'Permissions',
       Icons.lock,
       'permissions',
-      permissions == null ? [
-        const Center(child: CircularProgressIndicator()),
-      ] : List<String>.from(permissions['all'] ?? []).map((perm) {
-        final isGranted = Set<String>.from(
-          permissions['granted'] ?? [],
-        ).contains(perm);
-        return _buildPermissionRow(perm, isGranted);
-      }).toList(),
-      count: permissions != null ? List<String>.from(permissions['all'] ?? []).length : null,
+      permissions == null
+          ? [const Center(child: CircularProgressIndicator())]
+          : List<String>.from(permissions['all'] ?? []).map((perm) {
+              final isGranted = Set<String>.from(
+                permissions['granted'] ?? [],
+              ).contains(perm);
+              return _buildPermissionRow(perm, isGranted);
+            }).toList(),
+      count: permissions != null
+          ? List<String>.from(permissions['all'] ?? []).length
+          : null,
     );
   }
 
-  Widget _buildPermissionRow(
-    String permission,
-    bool isGranted,
-  ) {
+  Widget _buildPermissionRow(String permission, bool isGranted) {
     final cs = Theme.of(context).colorScheme;
     final color = isGranted ? Colors.green : Colors.grey;
 
@@ -1050,19 +1057,13 @@ class _PackageDetailsPageState extends State<PackageDetailsPage> {
             ),
           ),
           const SizedBox(width: 8),
-          _buildPermissionActionButton(
-            permission,
-            isGranted,
-          ),
+          _buildPermissionActionButton(permission, isGranted),
         ],
       ),
     );
   }
 
-  Widget _buildPermissionActionButton(
-    String permission,
-    bool isGranted,
-  ) {
+  Widget _buildPermissionActionButton(String permission, bool isGranted) {
     final isLoading = _sectionLoading['perm_$permission'] == true;
     final buttonColor = isGranted ? Colors.red : Colors.green;
     final buttonText = isGranted ? 'Revoke' : 'Grant';
@@ -1071,7 +1072,9 @@ class _PackageDetailsPageState extends State<PackageDetailsPage> {
     return MouseRegion(
       cursor: SystemMouseCursors.click,
       child: GestureDetector(
-        onTap: isLoading ? null : () => _togglePermission(permission, isGranted),
+        onTap: isLoading
+            ? null
+            : () => _togglePermission(permission, isGranted),
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
           decoration: BoxDecoration(
@@ -1092,11 +1095,7 @@ class _PackageDetailsPageState extends State<PackageDetailsPage> {
                   ),
                 )
               else
-                Icon(
-                  buttonIcon,
-                  size: 12,
-                  color: buttonColor,
-                ),
+                Icon(buttonIcon, size: 12, color: buttonColor),
               const SizedBox(width: 4),
               Text(
                 buttonText,
@@ -1113,7 +1112,10 @@ class _PackageDetailsPageState extends State<PackageDetailsPage> {
     );
   }
 
-  Future<void> _togglePermission(String permission, bool isCurrentlyGranted) async {
+  Future<void> _togglePermission(
+    String permission,
+    bool isCurrentlyGranted,
+  ) async {
     if (widget.package == null) return;
 
     setState(() {
@@ -1123,7 +1125,7 @@ class _PackageDetailsPageState extends State<PackageDetailsPage> {
 
     try {
       final packageName = widget.package!.packageName;
-      
+
       if (isCurrentlyGranted) {
         await widget.repository.revokePermission(packageName, permission);
       } else {
@@ -1156,8 +1158,6 @@ class _PackageDetailsPageState extends State<PackageDetailsPage> {
     }
   }
 
-
-
   Widget _buildInfoRow(String label, String value) {
     final cs = Theme.of(context).colorScheme;
 
@@ -1182,23 +1182,15 @@ class _PackageDetailsPageState extends State<PackageDetailsPage> {
             Expanded(
               child: Text(
                 value,
-                style: const TextStyle(
-                  fontFamily: 'monospace',
-                  fontSize: 13,
-                ),
+                style: const TextStyle(fontFamily: 'monospace', fontSize: 13),
               ),
             ),
-            Icon(
-              Icons.copy,
-              size: 14,
-              color: cs.onSurfaceVariant,
-            ),
+            Icon(Icons.copy, size: 14, color: cs.onSurfaceVariant),
           ],
         ),
       ),
     );
   }
-
 
   String _formatTimestamp(dynamic timestamp) {
     if (timestamp == null) return 'Unknown';

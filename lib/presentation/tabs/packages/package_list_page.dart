@@ -46,7 +46,7 @@ class PackageListPage extends StatelessWidget {
     }
 
     final cs = Theme.of(context).colorScheme;
-    
+
     return Column(
       children: [
         Padding(
@@ -55,7 +55,10 @@ class PackageListPage extends StatelessWidget {
             children: [
               Expanded(
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 12,
+                  ),
                   decoration: BoxDecoration(
                     color: cs.surface,
                     borderRadius: BorderRadius.circular(12),
@@ -63,11 +66,7 @@ class PackageListPage extends StatelessWidget {
                   ),
                   child: Row(
                     children: [
-                      Icon(
-                        Icons.search,
-                        color: cs.onSurfaceVariant,
-                        size: 20,
-                      ),
+                      Icon(Icons.search, color: cs.onSurfaceVariant, size: 20),
                       const SizedBox(width: 12),
                       Expanded(
                         child: TextField(
@@ -99,10 +98,9 @@ class PackageListPage extends StatelessWidget {
                 ),
                 child: GestureDetector(
                   onTap: onRefresh,
-                  child: Icon(
-                    Icons.refresh,
-                    color: cs.primary,
-                    size: 20,
+                  child: MouseRegion(
+                    cursor: SystemMouseCursors.click,
+                    child: Icon(Icons.refresh, color: cs.primary, size: 20),
                   ),
                 ),
               ),
@@ -135,9 +133,15 @@ class PackageListPage extends StatelessWidget {
               FilledButton.icon(
                 onPressed: onInstallApk,
                 icon: const Icon(Icons.file_upload, size: 16),
-                label: const Text('Install APK', style: TextStyle(fontSize: 12)),
+                label: const Text(
+                  'Install APK',
+                  style: TextStyle(fontSize: 12),
+                ),
                 style: FilledButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 8,
+                  ),
                 ),
               ),
             ],
@@ -173,8 +177,8 @@ class PackageListPage extends StatelessWidget {
 
 class PackageListItem extends StatelessWidget {
   const PackageListItem({
-    super.key, 
-    required this.pkg, 
+    super.key,
+    required this.pkg,
     required this.onAction,
     required this.isEven,
   });
@@ -186,7 +190,7 @@ class PackageListItem extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    
+
     return Container(
       margin: const EdgeInsets.symmetric(vertical: 2),
       decoration: BoxDecoration(
@@ -201,9 +205,7 @@ class PackageListItem extends StatelessWidget {
           borderRadius: BorderRadius.circular(8),
           hoverColor: cs.primaryContainer,
           child: Container(
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(8),
-            ),
+            decoration: BoxDecoration(borderRadius: BorderRadius.circular(8)),
             child: Padding(
               padding: const EdgeInsets.all(12),
               child: Row(
@@ -264,7 +266,11 @@ class PackageListItem extends StatelessWidget {
 }
 
 class PackageActionButtons extends StatelessWidget {
-  const PackageActionButtons({super.key, required this.package, required this.onAction});
+  const PackageActionButtons({
+    super.key,
+    required this.package,
+    required this.onAction,
+  });
 
   final PackageInfo package;
   final Function(PackageAction, PackageInfo) onAction;
@@ -272,13 +278,13 @@ class PackageActionButtons extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (!package.canLaunch) return const SizedBox.shrink();
-    
+
     final isRunning = package.isRunning;
     final color = isRunning ? Colors.red : Colors.green;
     final icon = isRunning ? Icons.stop : Icons.play_arrow;
     final text = isRunning ? 'Stop' : 'Start';
     final action = isRunning ? PackageAction.stop : PackageAction.start;
-    
+
     return MouseRegion(
       cursor: SystemMouseCursors.click,
       child: GestureDetector(
@@ -295,11 +301,14 @@ class PackageActionButtons extends StatelessWidget {
             children: [
               Icon(icon, size: 14, color: color),
               const SizedBox(width: 4),
-              Text(text, style: TextStyle(
-                fontSize: 11,
-                fontWeight: FontWeight.w500,
-                color: color,
-              )),
+              Text(
+                text,
+                style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w500,
+                  color: color,
+                ),
+              ),
             ],
           ),
         ),
@@ -343,11 +352,14 @@ class PackageIcon extends StatelessWidget {
   Widget build(BuildContext context) {
     if (pkg.iconBase64.isNotEmpty) {
       try {
-        final iconData = pkg.iconBase64.contains(',') 
-            ? pkg.iconBase64.split(',').last 
+        final iconData = pkg.iconBase64.contains(',')
+            ? pkg.iconBase64.split(',').last
             : pkg.iconBase64;
         final bytes = base64Decode(iconData);
-        return CircleAvatar(radius: radius, backgroundImage: MemoryImage(bytes));
+        return CircleAvatar(
+          radius: radius,
+          backgroundImage: MemoryImage(bytes),
+        );
       } catch (e) {
         // Invalid base64 data, fall through to default icon
       }

@@ -3,13 +3,13 @@ import 'package:flutter/services.dart';
 import 'dart:async';
 
 import 'package:jezail_ui/core/enums/device_enums.dart';
-import 'package:jezail_ui/repositories/device_repository.dart';
+import 'package:jezail_ui/repositories/logs_repository.dart';
 import 'package:jezail_ui/core/extensions/snackbar_extensions.dart';
 import 'package:jezail_ui/presentation/tabs/device/widgets/search.dart';
 
 class LogsTab extends StatefulWidget {
   const LogsTab({super.key, required this.repository});
-  final DeviceRepository repository;
+  final LogsRepository repository;
 
   @override
   State<LogsTab> createState() => _LogsTabState();
@@ -48,7 +48,7 @@ class _LogsTabState extends State<LogsTab> with SingleTickerProviderStateMixin {
     setState(() => loading = true);
     anim.repeat();
     try {
-      allLogs = await widget.repository.getLogs(type, lines: logLimit);
+      allLogs = await widget.repository.getLogs(type, lines: logLimit, filter: filter.isEmpty ? null : filter);
     } catch (e) {
       if (mounted) context.showErrorSnackBar('Failed to load logs');
     } finally {

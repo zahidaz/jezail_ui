@@ -3,7 +3,7 @@ import 'package:flutter/services.dart';
 import 'dart:async';
 
 import 'package:jezail_ui/models/device/process_info.dart';
-import 'package:jezail_ui/repositories/device_repository.dart';
+import 'package:jezail_ui/repositories/processes_repository.dart';
 import 'package:jezail_ui/core/extensions/snackbar_extensions.dart';
 import 'package:jezail_ui/core/enums/process_enums.dart';
 import 'package:jezail_ui/presentation/utils/dialog_utils.dart';
@@ -11,7 +11,7 @@ import 'package:jezail_ui/presentation/tabs/device/widgets/search.dart';
 
 class ProcessesTab extends StatefulWidget {
   const ProcessesTab({super.key, required this.repository});
-  final DeviceRepository repository;
+  final ProcessesRepository repository;
 
   @override
   State<ProcessesTab> createState() => _ProcessesTabState();
@@ -338,4 +338,3 @@ class _ProcessesTabState extends State<ProcessesTab> with SingleTickerProviderSt
     ]);
   }
 }
-

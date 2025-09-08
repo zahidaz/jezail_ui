@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
-import 'package:jezail_ui/repositories/device_repository.dart';
+import 'package:jezail_ui/repositories/controls_repository.dart';
 import 'package:jezail_ui/core/extensions/snackbar_extensions.dart';
 
 class ControlsTab extends StatefulWidget {
   const ControlsTab({super.key, required this.repository});
-  final DeviceRepository repository;
+  final ControlsRepository repository;
 
   @override
   State<ControlsTab> createState() => _ControlsTabState();
@@ -114,7 +114,7 @@ class _ControlsTabState extends State<ControlsTab> with SingleTickerProviderStat
 
   Future<void> downloadScreenshot() async {
     HapticFeedback.heavyImpact();
-    await action('Screenshot downloaded', () => widget.repository.downloadScreenshot());
+    await action('Screenshot downloaded', () => widget.repository.takeScreenshot());
   }
 
   Future<void> getSystemProperty() async {

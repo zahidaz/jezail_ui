@@ -67,12 +67,18 @@ final class _FileToolbarState extends State<FileToolbar> {
     final cs = Theme.of(context).colorScheme;
     return Container(
       decoration: BoxDecoration(
-        color: widget.canNavigateUp ? cs.primary.withAlpha(25) : cs.surfaceContainerHighest.withAlpha(25),
+        color: widget.canNavigateUp
+            ? cs.primary.withAlpha(25)
+            : cs.surfaceContainerHighest.withAlpha(25),
         borderRadius: BorderRadius.circular(8),
       ),
       child: IconButton(
         onPressed: widget.canNavigateUp ? widget.onNavigateUp : null,
-        icon: Icon(Icons.arrow_back, size: 18, color: widget.canNavigateUp ? cs.primary : cs.onSurfaceVariant),
+        icon: Icon(
+          Icons.arrow_back,
+          size: 18,
+          color: widget.canNavigateUp ? cs.primary : cs.onSurfaceVariant,
+        ),
         tooltip: 'Navigate back',
         padding: const EdgeInsets.all(8),
       ),
@@ -84,13 +90,6 @@ final class _FileToolbarState extends State<FileToolbar> {
       spacing: 6,
       runSpacing: 6,
       children: [
-        ActionChip(
-          label: const Text('Refresh', style: TextStyle(fontSize: 11)),
-          onPressed: widget.onRefresh,
-          avatar: const Icon(Icons.refresh, size: 14),
-          materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-          tooltip: 'Refresh (F5)',
-        ),
         ActionChip(
           label: const Text('Folder', style: TextStyle(fontSize: 11)),
           onPressed: widget.onCreateFolder,
@@ -122,7 +121,10 @@ final class _FileToolbarState extends State<FileToolbar> {
           ),
         if (widget.selectedFiles.isNotEmpty)
           ActionChip(
-            label: Text('Delete (${widget.selectedFiles.length})', style: const TextStyle(fontSize: 11, color: Colors.red)),
+            label: Text(
+              'Delete (${widget.selectedFiles.length})',
+              style: const TextStyle(fontSize: 11, color: Colors.red),
+            ),
             onPressed: widget.onDelete,
             avatar: const Icon(Icons.delete, size: 14, color: Colors.red),
             materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
@@ -137,10 +139,8 @@ final class _FileToolbarState extends State<FileToolbar> {
     final totalFiles = widget.files.length;
     final filteredCount = widget.filteredFiles.length;
     final isFiltered = filteredCount != totalFiles;
-
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: CrossAxisAlignment.end,
+    final cs = Theme.of(context).colorScheme;
+    return Row(
       children: [
         Text(
           isFiltered
@@ -157,8 +157,23 @@ final class _FileToolbarState extends State<FileToolbar> {
               color: theme.colorScheme.primary,
             ),
           ),
+        SizedBox(width: 10),
+        Container(
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: cs.surface,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: cs.outline.withAlpha(25)),
+          ),
+          child: GestureDetector(
+            onTap: widget.onRefresh,
+            child: MouseRegion(
+              cursor: SystemMouseCursors.click,
+              child: Icon(Icons.refresh, color: cs.primary, size: 20),
+            ),
+          ),
+        ),
       ],
     );
   }
-
 }

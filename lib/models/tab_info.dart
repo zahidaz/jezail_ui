@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:jezail_ui/repositories/files_repository.dart';
 import 'package:jezail_ui/repositories/package_repository.dart';
 import 'package:jezail_ui/repositories/device_repository.dart';
+import 'package:jezail_ui/repositories/processes_repository.dart';
+import 'package:jezail_ui/repositories/logs_repository.dart';
+import 'package:jezail_ui/repositories/controls_repository.dart';
 import 'package:jezail_ui/repositories/adb_repository.dart';
 import 'package:jezail_ui/repositories/frida_repository.dart';
 import 'package:jezail_ui/services/api_service.dart';
@@ -13,6 +16,9 @@ import 'package:jezail_ui/services/frida_service.dart';
 import 'package:jezail_ui/presentation/tabs/packages/packages_tab.dart';
 import 'package:jezail_ui/presentation/tabs/files/files_tab.dart';
 import 'package:jezail_ui/presentation/tabs/device/device_tab.dart';
+import 'package:jezail_ui/presentation/tabs/processes/processes_tab.dart';
+import 'package:jezail_ui/presentation/tabs/logs/logs_tab.dart';
+import 'package:jezail_ui/presentation/tabs/controls/controls_tab.dart';
 import 'package:jezail_ui/presentation/tabs/adb/adb_tool.dart';
 import 'package:jezail_ui/presentation/tabs/frida/frida_tool.dart';
 import 'package:jezail_ui/presentation/tabs/settings/settings_tab.dart';
@@ -34,14 +40,6 @@ class TabInfo {
 
 final tabsConfig = [
   TabInfo(
-    title: 'Packages',
-    path: '/packages',
-    icon: Icons.inventory_2,
-    builder: (apiService) => PackagesTab(
-      packageRepository: PackageRepository(PackageService(apiService)),
-    ),
-  ),
-  TabInfo(
     title: 'Files',
     path: '/files',
     icon: Icons.folder_open,
@@ -50,11 +48,43 @@ final tabsConfig = [
     ),
   ),
   TabInfo(
+    title: 'Packages',
+    path: '/packages',
+    icon: Icons.inventory_2,
+    builder: (apiService) => PackagesTab(
+      packageRepository: PackageRepository(PackageService(apiService)),
+    ),
+  ),
+  TabInfo(
     title: 'Device',
     path: '/device',
     icon: Icons.phone_android,
     builder: (apiService) => DeviceTab(
       repository: DeviceRepository(DeviceService(apiService)),
+    ),
+  ),
+  TabInfo(
+    title: 'Processes',
+    path: '/processes',
+    icon: Icons.list,
+    builder: (apiService) => ProcessesTab(
+      repository: ProcessesRepository(DeviceService(apiService)),
+    ),
+  ),
+  TabInfo(
+    title: 'Logs',
+    path: '/logs',
+    icon: Icons.article,
+    builder: (apiService) => LogsTab(
+      repository: LogsRepository(DeviceService(apiService)),
+    ),
+  ),
+  TabInfo(
+    title: 'Controls',
+    path: '/controls',
+    icon: Icons.gamepad,
+    builder: (apiService) => ControlsTab(
+      repository: ControlsRepository(DeviceService(apiService)),
     ),
   ),
   TabInfo(
