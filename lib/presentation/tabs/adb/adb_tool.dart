@@ -19,16 +19,16 @@ class _ActionButton {
   _ActionButton(this.label, this.icon, this.onPressed);
 }
 
-class AdbTool extends StatefulWidget {
+class AdbTab extends StatefulWidget {
   final AdbRepository repository;
 
-  const AdbTool({super.key, required this.repository});
+  const AdbTab({super.key, required this.repository});
 
   @override
-  State<AdbTool> createState() => _AdbToolState();
+  State<AdbTab> createState() => _AdbTabState();
 }
 
-class _AdbToolState extends State<AdbTool> {
+class _AdbTabState extends State<AdbTab> {
   AdbStatus? adbStatus;
   bool isLoading = false;
 
@@ -165,89 +165,97 @@ class _AdbToolState extends State<AdbTool> {
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            ListTile(
-              contentPadding: EdgeInsets.zero,
-              leading: Icon(
-                Icons.terminal,
-                color: Theme.of(context).colorScheme.primary,
-              ),
-              title: Text(
-                'ADB',
-                style: Theme.of(
-                  context,
-                ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
-              ),
-              subtitle: Text('Android Debug Bridge'),
-              trailing: IconButton(
-                onPressed: isLoading ? null : _loadStatus,
-                icon: const Icon(Icons.refresh),
-                tooltip: 'Refresh ADB status',
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(16.0),
+      child: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 600),
+          child: Card(
+            child: Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    leading: Icon(
+                      Icons.terminal,
+                      color: Theme.of(context).colorScheme.primary,
+                    ),
+                    title: Text(
+                      'ADB',
+                      style: Theme.of(
+                        context,
+                      ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
+                    ),
+                    subtitle: Text('Android Debug Bridge'),
+                    trailing: IconButton(
+                      onPressed: isLoading ? null : _loadStatus,
+                      icon: const Icon(Icons.refresh),
+                      tooltip: 'Refresh ADB status',
+                    ),
+                  ),
+                  if (_getStatusItems().isNotEmpty) ...[
+                    const SizedBox(height: 8),
+                    ..._getStatusItems().map(
+                      (item) => Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 2.0),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            SizedBox(
+                              width: 120,
+                              child: Text(
+                                '${item.label}:',
+                                style: Theme.of(context).textTheme.bodySmall
+                                    ?.copyWith(fontWeight: FontWeight.w600),
+                              ),
+                            ),
+                            Expanded(
+                              child: Text(
+                                item.value,
+                                style: Theme.of(context).textTheme.bodySmall
+                                    ?.copyWith(
+                                      color:
+                                          item.color ??
+                                          Theme.of(context).colorScheme.onSurface,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                  ],
+                  if (_getActions().isNotEmpty)
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: _getActions()
+                          .map(
+                            (action) => ActionChip(
+                              avatar: Icon(action.icon, size: 18),
+                              label: Text(action.label),
+                              onPressed: action.onPressed,
+                              backgroundColor: Theme.of(
+                                context,
+                              ).colorScheme.secondaryContainer,
+                              labelStyle: TextStyle(
+                                color: Theme.of(
+                                  context,
+                                ).colorScheme.onSecondaryContainer,
+                                fontSize: 12,
+                              ),
+                            ),
+                          )
+                          .toList(),
+                    ),
+                ],
               ),
             ),
-            if (_getStatusItems().isNotEmpty) ...[
-              const SizedBox(height: 8),
-              ..._getStatusItems().map(
-                (item) => Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 2.0),
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      SizedBox(
-                        width: 120,
-                        child: Text(
-                          '${item.label}:',
-                          style: Theme.of(context).textTheme.bodySmall
-                              ?.copyWith(fontWeight: FontWeight.w600),
-                        ),
-                      ),
-                      Expanded(
-                        child: Text(
-                          item.value,
-                          style: Theme.of(context).textTheme.bodySmall
-                              ?.copyWith(
-                                color:
-                                    item.color ??
-                                    Theme.of(context).colorScheme.onSurface,
-                                fontWeight: FontWeight.w500,
-                              ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-              const SizedBox(height: 16),
-            ],
-            if (_getActions().isNotEmpty)
-              Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children: _getActions()
-                    .map(
-                      (action) => ActionChip(
-                        avatar: Icon(action.icon, size: 18),
-                        label: Text(action.label),
-                        onPressed: action.onPressed,
-                        backgroundColor: Theme.of(
-                          context,
-                        ).colorScheme.secondaryContainer,
-                        labelStyle: TextStyle(
-                          color: Theme.of(
-                            context,
-                          ).colorScheme.onSecondaryContainer,
-                          fontSize: 12,
-                        ),
-                      ),
-                    )
-                    .toList(),
-              ),
-          ],
+          ),
         ),
       ),
     );

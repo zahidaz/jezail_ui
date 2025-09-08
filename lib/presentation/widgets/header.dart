@@ -7,6 +7,26 @@ import 'package:jezail_ui/core/log.dart';
 import 'package:jezail_ui/core/enums/battery_level.dart';
 import 'package:jezail_ui/models/device/device_info.dart';
 
+class AppHeader extends StatelessWidget {
+  final DeviceService deviceService;
+  final VoidCallback? onToggleSidebar;
+
+  const AppHeader({
+    super.key,
+    required this.deviceService,
+    this.onToggleSidebar,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Header(
+      deviceService: deviceService,
+      onToggleSidebar: onToggleSidebar,
+    );
+  }
+}
+
+
 class Header extends StatefulWidget {
   const Header({super.key, required this.deviceService, this.onToggleSidebar});
 

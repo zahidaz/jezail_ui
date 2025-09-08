@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:jezail_ui/services/api_service.dart';
 import 'package:jezail_ui/repositories/files_repository.dart';
 import 'package:jezail_ui/repositories/package_repository.dart';
 import 'package:jezail_ui/repositories/device_repository.dart';
@@ -7,10 +8,9 @@ import 'package:jezail_ui/repositories/logs_repository.dart';
 import 'package:jezail_ui/repositories/controls_repository.dart';
 import 'package:jezail_ui/repositories/adb_repository.dart';
 import 'package:jezail_ui/repositories/frida_repository.dart';
-import 'package:jezail_ui/services/api_service.dart';
+import 'package:jezail_ui/services/device_service.dart';
 import 'package:jezail_ui/services/file_service.dart';
 import 'package:jezail_ui/services/package_service.dart';
-import 'package:jezail_ui/services/device_service.dart';
 import 'package:jezail_ui/services/adb_service.dart';
 import 'package:jezail_ui/services/frida_service.dart';
 import 'package:jezail_ui/presentation/tabs/packages/packages_tab.dart';
@@ -29,12 +29,14 @@ class TabInfo {
   final String path;
   final IconData icon;
   final Widget Function(ApiService) builder;
+  final bool hasSubroutes;
 
   const TabInfo({
     required this.title,
     required this.path,
     required this.icon,
     required this.builder,
+    this.hasSubroutes = false,
   });
 }
 
@@ -43,9 +45,8 @@ final tabsConfig = [
     title: 'Files',
     path: '/files',
     icon: Icons.folder_open,
-    builder: (apiService) => FilesTab(
-      repository: FileRepository(FilesService(apiService)),
-    ),
+    builder: (apiService) =>
+        FilesTab(repository: FileRepository(FilesService(apiService))),
   ),
   TabInfo(
     title: 'Packages',
@@ -54,14 +55,14 @@ final tabsConfig = [
     builder: (apiService) => PackagesTab(
       packageRepository: PackageRepository(PackageService(apiService)),
     ),
+    hasSubroutes: true,
   ),
   TabInfo(
     title: 'Device',
     path: '/device',
     icon: Icons.phone_android,
-    builder: (apiService) => DeviceTab(
-      repository: DeviceRepository(DeviceService(apiService)),
-    ),
+    builder: (apiService) =>
+        DeviceTab(repository: DeviceRepository(DeviceService(apiService))),
   ),
   TabInfo(
     title: 'Processes',
@@ -75,45 +76,29 @@ final tabsConfig = [
     title: 'Logs',
     path: '/logs',
     icon: Icons.article,
-    builder: (apiService) => LogsTab(
-      repository: LogsRepository(DeviceService(apiService)),
-    ),
+    builder: (apiService) =>
+        LogsTab(repository: LogsRepository(DeviceService(apiService))),
   ),
   TabInfo(
     title: 'Controls',
     path: '/controls',
     icon: Icons.gamepad,
-    builder: (apiService) => ControlsTab(
-      repository: ControlsRepository(DeviceService(apiService)),
-    ),
+    builder: (apiService) =>
+        ControlsTab(repository: ControlsRepository(DeviceService(apiService))),
   ),
   TabInfo(
     title: 'ADB',
     path: '/adb',
     icon: Icons.terminal,
-    builder: (apiService) => SingleChildScrollView(
-      padding: const EdgeInsets.all(16.0),
-      child: Center(
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 600),
-          child: AdbTool(repository: AdbRepository(AdbService(apiService))),
-        ),
-      ),
-    ),
+    builder: (apiService) =>
+        AdbTab(repository: AdbRepository(AdbService(apiService))),
   ),
   TabInfo(
     title: 'Frida',
     path: '/frida',
     icon: Icons.api,
-    builder: (apiService) => SingleChildScrollView(
-      padding: const EdgeInsets.all(16.0),
-      child: Center(
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 600),
-          child: FridaTool(repository: FridaRepository(FridaService(apiService))),
-        ),
-      ),
-    ),
+    builder: (apiService) =>
+        FridaTab(repository: FridaRepository(FridaService(apiService))),
   ),
   TabInfo(
     title: 'Settings',

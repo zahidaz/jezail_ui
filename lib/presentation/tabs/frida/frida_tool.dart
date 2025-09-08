@@ -22,16 +22,16 @@ class _ActionButton {
   _ActionButton(this.label, this.icon, this.onPressed);
 }
 
-class FridaTool extends StatefulWidget {
+class FridaTab extends StatefulWidget {
   final FridaRepository repository;
 
-  const FridaTool({super.key, required this.repository});
+  const FridaTab({super.key, required this.repository});
 
   @override
-  State<FridaTool> createState() => _FridaToolState();
+  State<FridaTab> createState() => _FridaTabState();
 }
 
-class _FridaToolState extends State<FridaTool> {
+class _FridaTabState extends State<FridaTab> {
   FridaStatus? fridaStatus;
   FridaInfo? fridaInfo;
   bool isLoading = false;
@@ -168,127 +168,139 @@ class _FridaToolState extends State<FridaTool> {
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            ListTile(
-              contentPadding: EdgeInsets.zero,
-              leading: Icon(
-                Icons.api,
-                color: Theme.of(context).colorScheme.primary,
-              ),
-              title: Text(
-                'Frida',
-                style: Theme.of(
-                  context,
-                ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
-              ),
-              subtitle: Text('Dynamic Instrumentation Toolkit'),
-              trailing: IconButton(
-                onPressed: isLoading ? null : _loadStatus,
-                icon: const Icon(Icons.refresh),
-                tooltip: 'Refresh Frida status',
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(16.0),
+      child: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 600),
+          child: Card(
+            child: Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    leading: Icon(
+                      Icons.api,
+                      color: Theme.of(context).colorScheme.primary,
+                    ),
+                    title: Text(
+                      'Frida',
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    subtitle: Text('Dynamic Instrumentation Toolkit'),
+                    trailing: IconButton(
+                      onPressed: isLoading ? null : _loadStatus,
+                      icon: const Icon(Icons.refresh),
+                      tooltip: 'Refresh Frida status',
+                    ),
+                  ),
+                  if (_getStatusItems().isNotEmpty) ...[
+                    const SizedBox(height: 8),
+                    ..._getStatusItems().map(
+                      (item) => Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 2.0),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            SizedBox(
+                              width: 120,
+                              child: Text(
+                                '${item.label}:',
+                                style: Theme.of(context).textTheme.bodySmall
+                                    ?.copyWith(fontWeight: FontWeight.w600),
+                              ),
+                            ),
+                            Expanded(
+                              child: item.isPath
+                                  ? GestureDetector(
+                                      onTap: () {
+                                        Clipboard.setData(
+                                          ClipboardData(text: item.value),
+                                        );
+                                        context.showSuccessSnackBar(
+                                          'Path copied to clipboard',
+                                        );
+                                      },
+                                      child: Row(
+                                        children: [
+                                          Flexible(
+                                            child: Text(
+                                              item.value,
+                                              style: Theme.of(context)
+                                                  .textTheme
+                                                  .bodySmall
+                                                  ?.copyWith(
+                                                    color: Theme.of(
+                                                      context,
+                                                    ).colorScheme.primary,
+                                                    fontWeight: FontWeight.w500,
+                                                  ),
+                                              overflow: TextOverflow.ellipsis,
+                                            ),
+                                          ),
+                                          const SizedBox(width: 6),
+                                          Icon(
+                                            Icons.copy,
+                                            size: 16,
+                                            color: Theme.of(
+                                              context,
+                                            ).colorScheme.primary,
+                                          ),
+                                        ],
+                                      ),
+                                    )
+                                  : Text(
+                                      item.value,
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .bodySmall
+                                          ?.copyWith(
+                                            color:
+                                                item.color ??
+                                                Theme.of(
+                                                  context,
+                                                ).colorScheme.onSurface,
+                                            fontWeight: FontWeight.w500,
+                                          ),
+                                    ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                  ],
+                  if (_getActions().isNotEmpty)
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: _getActions()
+                          .map(
+                            (action) => ActionChip(
+                              avatar: Icon(action.icon, size: 18),
+                              label: Text(action.label),
+                              onPressed: action.onPressed,
+                              backgroundColor: Theme.of(
+                                context,
+                              ).colorScheme.secondaryContainer,
+                              labelStyle: TextStyle(
+                                color: Theme.of(
+                                  context,
+                                ).colorScheme.onSecondaryContainer,
+                                fontSize: 12,
+                              ),
+                            ),
+                          )
+                          .toList(),
+                    ),
+                ],
               ),
             ),
-            if (_getStatusItems().isNotEmpty) ...[
-              const SizedBox(height: 8),
-              ..._getStatusItems().map(
-                (item) => Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 2.0),
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      SizedBox(
-                        width: 120,
-                        child: Text(
-                          '${item.label}:',
-                          style: Theme.of(context).textTheme.bodySmall
-                              ?.copyWith(fontWeight: FontWeight.w600),
-                        ),
-                      ),
-                      Expanded(
-                        child: item.isPath
-                            ? GestureDetector(
-                                onTap: () {
-                                  Clipboard.setData(
-                                    ClipboardData(text: item.value),
-                                  );
-                                  context.showSuccessSnackBar('Path copied to clipboard');
-                                },
-                                child: Row(
-                                  children: [
-                                    Flexible(
-                                      child: Text(
-                                        item.value,
-                                        style: Theme.of(context)
-                                            .textTheme
-                                            .bodySmall
-                                            ?.copyWith(
-                                              color: Theme.of(
-                                                context,
-                                              ).colorScheme.primary,
-                                              fontWeight: FontWeight.w500,
-                                            ),
-                                        overflow: TextOverflow.ellipsis,
-                                      ),
-                                    ),
-                                    const SizedBox(width: 6),
-                                    Icon(
-                                      Icons.copy,
-                                      size: 16,
-                                      color: Theme.of(
-                                        context,
-                                      ).colorScheme.primary,
-                                    ),
-                                  ],
-                                ),
-                              )
-                            : Text(
-                                item.value,
-                                style: Theme.of(context).textTheme.bodySmall
-                                    ?.copyWith(
-                                      color:
-                                          item.color ??
-                                          Theme.of(
-                                            context,
-                                          ).colorScheme.onSurface,
-                                      fontWeight: FontWeight.w500,
-                                    ),
-                              ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-              const SizedBox(height: 16),
-            ],
-            if (_getActions().isNotEmpty)
-              Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children: _getActions()
-                    .map(
-                      (action) => ActionChip(
-                        avatar: Icon(action.icon, size: 18),
-                        label: Text(action.label),
-                        onPressed: action.onPressed,
-                        backgroundColor: Theme.of(
-                          context,
-                        ).colorScheme.secondaryContainer,
-                        labelStyle: TextStyle(
-                          color: Theme.of(
-                            context,
-                          ).colorScheme.onSecondaryContainer,
-                          fontSize: 12,
-                        ),
-                      ),
-                    )
-                    .toList(),
-              ),
-          ],
+          ),
         ),
       ),
     );
