@@ -118,13 +118,7 @@ class _MyHomePageState extends State<MyHomePage> {
 
   int get _currentTabIndex {
     final location = GoRouterState.of(context).fullPath ?? '';
-    final path = location.split('?').first;
-    
-    if (path.startsWith('/packages')) {
-      return tabsConfig.indexWhere((tab) => tab.path == '/packages');
-    }
-    
-    final index = tabsConfig.indexWhere((tab) => tab.path == path);
+    final index = tabsConfig.indexWhere((tab) => tab.path.startsWith(location));
     return index == -1 ? 0 : index;
   }
 
