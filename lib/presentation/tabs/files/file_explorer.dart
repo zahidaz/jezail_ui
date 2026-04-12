@@ -17,12 +17,14 @@ import 'package:jezail_ui/core/extensions/snackbar_extensions.dart';
 
 final class FileExplorer extends StatefulWidget {
   const FileExplorer({
-    super.key, 
+    super.key,
     required this.repository,
+    required this.controller,
     this.onPathChanged,
   });
 
   final FileRepository repository;
+  final FileExplorerController controller;
   final void Function(String path)? onPathChanged;
 
   @override
@@ -30,7 +32,7 @@ final class FileExplorer extends StatefulWidget {
 }
 
 final class _FileExplorerState extends State<FileExplorer> {
-  late final FileExplorerController _controller;
+  FileExplorerController get _controller => widget.controller;
   final TextEditingController _pathController = TextEditingController();
   String _filterQuery = '';
   bool _isMultiSelectMode = false;
@@ -38,7 +40,6 @@ final class _FileExplorerState extends State<FileExplorer> {
   @override
   void initState() {
     super.initState();
-    _controller = FileExplorerController(widget.repository);
     _controller.addListener(_onStateChanged);
     _pathController.text = _controller.value.currentPath;
   }
@@ -46,13 +47,12 @@ final class _FileExplorerState extends State<FileExplorer> {
   @override
   void dispose() {
     _controller.removeListener(_onStateChanged);
-    _controller.dispose();
     _pathController.dispose();
     super.dispose();
   }
 
   String _lastPath = '';
-  
+
   void _onStateChanged() {
     final currentPath = _controller.value.currentPath;
     
@@ -63,6 +63,9 @@ final class _FileExplorerState extends State<FileExplorer> {
     if (currentPath != _lastPath) {
       widget.onPathChanged?.call(currentPath);
       _lastPath = currentPath;
+      if (_isMultiSelectMode) {
+        setState(() => _isMultiSelectMode = false);
+      }
     }
   }
 
@@ -100,7 +103,6 @@ final class _FileExplorerState extends State<FileExplorer> {
               onCreateFile: _showCreateFileDialog,
               onDelete: _deleteSelectedFiles,
               onUpload: _showUploadDialog,
-              onFilterChanged: _onFilterChanged,
               onDownload: _downloadSelectedFiles,
             ),
             PathNavigator(
@@ -329,33 +331,22 @@ final class _FileExplorerState extends State<FileExplorer> {
     );
   }
 
-  Future<void> _downloadFile(FileInfo file) async {
-    await _downloadFiles([file]);
+  void _downloadFile(FileInfo file) {
+    _downloadFiles([file]);
   }
 
-  Future<void> _downloadSelectedFiles() async {
+  void _downloadSelectedFiles() {
     final files = _controller.value.selectedFiles.toList();
     if (files.isEmpty) return;
-    await _downloadFiles(files);
+    _downloadFiles(files);
   }
 
-  Future<void> _downloadFiles(List<FileInfo> files) async {
-    final fileCount = files.length;
-    final isMultiple = fileCount > 1;
-    
-    context.showSnackBar(isMultiple 
-        ? 'Downloading $fileCount files...' 
-        : 'Downloading ${files.first.displayName}...');
-
-    final result = await _controller.downloadFiles(files);
-
-    if (!mounted) return;
+  void _downloadFiles(List<FileInfo> files) {
+    final result = _controller.downloadFiles(files);
 
     result.when(
-      success: (filename) {
-        context.showSuccessSnackBar(isMultiple 
-            ? 'Downloaded $fileCount files as $filename'
-            : 'Downloaded $filename');
+      success: (name) {
+        context.showSuccessSnackBar('Download started: $name');
       },
       error: (message, _) => context.showErrorSnackBar('Download failed: $message'),
       loading: () {},

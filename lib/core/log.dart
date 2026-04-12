@@ -2,36 +2,25 @@ import 'package:logger/logger.dart';
 
 class Log {
   static Logger? _instance;
-  
+
+  static final _defaultPrinter = PrettyPrinter(
+    methodCount: 2,
+    errorMethodCount: 8,
+    lineLength: 120,
+    colors: true,
+    printEmojis: true,
+    dateTimeFormat: DateTimeFormat.onlyTimeAndSinceStart,
+  );
+
   static Logger get instance {
-    _instance ??= Logger(
-      level: Level.all,
-      printer: PrettyPrinter(
-        methodCount: 2,
-        errorMethodCount: 8,
-        lineLength: 120,
-        colors: true,
-        printEmojis: true,
-        dateTimeFormat: DateTimeFormat.onlyTimeAndSinceStart,
-      ),
-    );
+    _instance ??= Logger(level: Level.all, printer: _defaultPrinter);
     return _instance!;
   }
 
-  static void configure({
-    Level? level,
-    LogPrinter? printer,
-  }) {
+  static void configure({Level? level, LogPrinter? printer}) {
     _instance = Logger(
       level: level ?? Level.all,
-      printer: printer ?? PrettyPrinter(
-        methodCount: 2,
-        errorMethodCount: 8,
-        lineLength: 120,
-        colors: true,
-        printEmojis: true,
-        dateTimeFormat: DateTimeFormat.onlyTimeAndSinceStart,
-      ),
+      printer: printer ?? _defaultPrinter,
     );
   }
 
@@ -59,5 +48,3 @@ class Log {
     instance.f(message, error: error, stackTrace: stackTrace);
   }
 }
-
-final log = Log.instance;

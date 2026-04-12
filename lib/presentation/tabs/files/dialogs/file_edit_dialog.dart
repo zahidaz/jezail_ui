@@ -26,6 +26,10 @@ class _FileEditDialogState extends State<FileEditDialog> {
   bool _isSaving = false;
   String? _error;
 
+  String get _filePath => widget.currentPath == '/'
+      ? '/${widget.file.displayName}'
+      : '${widget.currentPath}/${widget.file.displayName}';
+
   @override
   void initState() {
     super.initState();
@@ -41,12 +45,8 @@ class _FileEditDialogState extends State<FileEditDialog> {
 
   Future<void> _loadFileContent() async {
     try {
-      final filePath = widget.currentPath == '/' 
-          ? '/${widget.file.displayName}' 
-          : '${widget.currentPath}/${widget.file.displayName}';
-      
-      final content = await widget.repository.readFile(filePath);
-      
+      final content = await widget.repository.readFile(_filePath);
+
       setState(() {
         _controller.text = content;
         _isLoading = false;
@@ -65,11 +65,8 @@ class _FileEditDialogState extends State<FileEditDialog> {
     });
 
     try {
-      final filePath = widget.currentPath == '/' 
-          ? '/${widget.file.displayName}' 
-          : '${widget.currentPath}/${widget.file.displayName}';
       
-      await widget.repository.writeFile(filePath, _controller.text);
+      await widget.repository.writeFile(_filePath, _controller.text);
       
       if (mounted) {
         Navigator.pop(context);

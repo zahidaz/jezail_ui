@@ -105,17 +105,27 @@ extension BuildContextSnackBars on BuildContext {
     required Future<void> Function() action,
     required String successMessage,
     String? errorMessage,
+    String? loadingMessage,
     SnackBarAction? actionButton,
   }) async {
+    if (loadingMessage != null) {
+      _showSnackBar(
+        loadingMessage,
+        backgroundColor: Colors.blueGrey.shade700,
+        icon: Icons.hourglass_top,
+        duration: const Duration(minutes: 5),
+      );
+    }
     try {
       await action();
       if (!mounted) return;
-      showSuccessSnackBar(successMessage, action: actionButton);
+      if (successMessage.isNotEmpty) {
+        showSuccessSnackBar(successMessage, action: actionButton);
+      }
     } catch (e) {
       if (!mounted) return;
-      showErrorSnackBar(
-        '${errorMessage ?? "Operation failed"}: ${e.toString()}',
-      );
+      final msg = errorMessage?.isNotEmpty == true ? errorMessage! : 'Operation failed';
+      showErrorSnackBar('$msg: ${e.toString()}');
     }
   }
 }

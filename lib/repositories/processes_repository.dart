@@ -8,12 +8,12 @@ class ProcessesRepository {
 
   Future<List<ProcessInfo>> getProcesses() async {
     final result = await _deviceService.listProcesses();
-    final processes = List<Map<String, dynamic>>.from(result['data'] ?? []);
+    final list = result is List ? result : (result['data'] ?? []);
+    final processes = List<Map<String, dynamic>>.from(list);
     return processes.map(ProcessInfo.fromJson).toList();
   }
 
-  Future<Map<String, dynamic>> getProcessInfo(int pid) async => 
-      await _deviceService.getProcess(pid);
+  Future<dynamic> getProcessInfo(int pid) => _deviceService.getProcess(pid);
 
   Future<void> killProcess(int pid) => _deviceService.killProcessByPid(pid);
 

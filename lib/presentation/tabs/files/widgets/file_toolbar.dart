@@ -15,7 +15,6 @@ final class FileToolbar extends StatefulWidget {
     required this.onCreateFile,
     required this.onDelete,
     required this.onUpload,
-    required this.onFilterChanged,
     this.onDownload,
   });
 
@@ -30,7 +29,6 @@ final class FileToolbar extends StatefulWidget {
   final VoidCallback onCreateFile;
   final VoidCallback onDelete;
   final VoidCallback onUpload;
-  final void Function(String filter) onFilterChanged;
   final VoidCallback? onDownload;
 
   @override
@@ -51,14 +49,35 @@ final class _FileToolbarState extends State<FileToolbar> {
         borderRadius: BorderRadius.circular(8),
         border: Border.all(color: cs.outline.withAlpha(25)),
       ),
-      child: Row(
-        children: [
-          _buildNavigationSection(),
-          const SizedBox(width: 16),
-          _buildActionSection(),
-          const Spacer(),
-          _buildStatusSection(theme),
-        ],
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          if (constraints.maxWidth < 600) {
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Row(
+                  children: [
+                    _buildNavigationSection(),
+                    const SizedBox(width: 8),
+                    Expanded(child: _buildActionSection()),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                _buildStatusSection(theme),
+              ],
+            );
+          }
+          return Row(
+            children: [
+              _buildNavigationSection(),
+              const SizedBox(width: 16),
+              Expanded(child: _buildActionSection()),
+              const SizedBox(width: 16),
+              _buildStatusSection(theme),
+            ],
+          );
+        },
       ),
     );
   }
@@ -150,14 +169,16 @@ final class _FileToolbarState extends State<FileToolbar> {
             fontWeight: FontWeight.w500,
           ),
         ),
-        if (widget.selectedFiles.isNotEmpty)
+        if (widget.selectedFiles.isNotEmpty) ...[
+          const SizedBox(width: 8),
           Text(
             '${widget.selectedFiles.length} selected',
             style: theme.textTheme.bodySmall?.copyWith(
               color: theme.colorScheme.primary,
             ),
           ),
-        SizedBox(width: 10),
+        ],
+        const SizedBox(width: 10),
         Container(
           padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(

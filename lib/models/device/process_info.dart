@@ -21,11 +21,10 @@ class ProcessInfo {
   final String? wchan;
 
   String? get state => stat;
-  double? get cpuUsage => null;
 
   factory ProcessInfo.fromJson(Map<String, dynamic> json) => ProcessInfo(
-    pid: json['pid'] as int,
-    name: json['name'] as String,
+    pid: (json['pid'] as int?) ?? 0,
+    name: (json['name'] as String?) ?? 'unknown',
     ppid: json['ppid'] as int?,
     user: json['user'] as String?,
     vsz: json['vsz'] as int?,

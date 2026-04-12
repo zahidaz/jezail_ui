@@ -1,4 +1,3 @@
-import 'dart:async';
 import 'dart:convert';
 import 'dart:typed_data';
 import 'package:http/http.dart' as http;
@@ -8,8 +7,11 @@ import 'package:jezail_ui/core/exceptions/api_exception.dart';
 class ApiService {
   final String baseUrl;
   final Map<String, String> _defaultHeaders;
+  final Duration timeout;
 
-  ApiService(this.baseUrl, {Map<String, String>? defaultHeaders})
+  String buildUrl(String endpoint) => '$baseUrl$endpoint';
+
+  ApiService(this.baseUrl, {Map<String, String>? defaultHeaders, this.timeout = const Duration(minutes: 5)})
     : _defaultHeaders = {
         'Content-Type': 'application/json',
         'Accept': 'application/json',
@@ -24,7 +26,7 @@ class ApiService {
       final response = await http.get(
         Uri.parse('$baseUrl$endpoint'),
         headers: {..._defaultHeaders, ...?headers},
-      );
+      ).timeout(timeout);
       return _handleResponse(response, 'GET', endpoint);
     } catch (e) {
       Log.error('GET $endpoint failed', e);
@@ -36,7 +38,7 @@ class ApiService {
     final response = await http.get(
       Uri.parse('$baseUrl$endpoint'),
       headers: headers ?? {},
-    );
+    ).timeout(timeout);
     
     if (response.statusCode >= 200 && response.statusCode < 300) {
       return response;
@@ -64,13 +66,13 @@ class ApiService {
           'Content-Type': 'text/plain; charset=utf-8',
         },
         body: body,
-      );
+      ).timeout(timeout);
     } else {
       response = await http.post(
         Uri.parse('$baseUrl$endpoint'),
         headers: {..._defaultHeaders, ...?headers},
         body: body != null ? jsonEncode(body) : null,
-      );
+      ).timeout(timeout);
     }
     
     return _handleResponse(response, 'POST', endpoint);
@@ -85,7 +87,7 @@ class ApiService {
       Uri.parse('$baseUrl$endpoint'),
       headers: {..._defaultHeaders, ...?headers},
       body: body != null ? jsonEncode(body) : null,
-    ),
+    ).timeout(timeout),
     'PUT',
     endpoint,
   );
@@ -99,7 +101,7 @@ class ApiService {
       Uri.parse('$baseUrl$endpoint'),
       headers: {..._defaultHeaders, ...?headers},
       body: body != null ? jsonEncode(body) : null,
-    ),
+    ).timeout(timeout),
     'PATCH',
     endpoint,
   );
@@ -111,7 +113,7 @@ class ApiService {
     await http.delete(
       Uri.parse('$baseUrl$endpoint'),
       headers: {..._defaultHeaders, ...?headers},
-    ),
+    ).timeout(timeout),
     'DELETE',
     endpoint,
   );
@@ -147,7 +149,7 @@ class ApiService {
       filename: filename,
     ));
 
-    final streamedResponse = await request.send();
+    final streamedResponse = await request.send().timeout(timeout);
     final response = await http.Response.fromStream(streamedResponse);
     
     return _handleResponse(response, 'POST', endpoint);
@@ -157,7 +159,7 @@ class ApiService {
     final response = await http.get(
       Uri.parse('$baseUrl$endpoint'),
       headers: {..._defaultHeaders, ...?headers},
-    );
+    ).timeout(timeout);
     
     if (response.statusCode >= 200 && response.statusCode < 300) {
       return response.bodyBytes;
@@ -169,22 +171,8 @@ class ApiService {
     );
   }
 
-  dynamic handleResponse(http.Response response) {
-    if (response.statusCode >= 200 && response.statusCode < 300) {
-      if (response.body.isEmpty) return {};
-      
-      try {
-        return jsonDecode(response.body);
-      } catch (e) {
-        return {'data': response.body};
-      }
-    } else {
-      throw ApiException(
-        'HTTP ${response.statusCode}: ${response.reasonPhrase ?? ''}',
-        response.statusCode,
-      );
-    }
-  }
+  dynamic handleResponse(http.Response response) =>
+      _handleResponse(response, response.request?.method ?? 'UNKNOWN', response.request?.url.path ?? '');
 
   dynamic _handleResponse(http.Response res, String method, String endpoint) {
     if (res.statusCode >= 200 && res.statusCode < 300) {

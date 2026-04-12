@@ -12,8 +12,8 @@ class AdbRepository {
       final result = await _adbService.getStatus();
       final data = result['data'];
       return AdbStatus(
-        isRunning: data['isRunning'] as bool,
-        port: data['port'],
+        isRunning: data['isRunning'] as bool? ?? false,
+        port: (data['preferredPort'] ?? data['port'] ?? '').toString(),
       );
     } catch (e) {
       throw ToolOperationException('Failed to get ADB status: $e');
@@ -41,6 +41,23 @@ class AdbRepository {
       await _adbService.installKey(publicKey);
     } catch (e) {
       throw ToolOperationException('Failed to install ADB key: $e');
+    }
+  }
+
+  Future<int> getPort() async {
+    try {
+      final result = await _adbService.getPort();
+      return (result['data']?['port'] as int?) ?? 5555;
+    } catch (e) {
+      throw ToolOperationException('Failed to get ADB port: $e');
+    }
+  }
+
+  Future<void> setPort(int port) async {
+    try {
+      await _adbService.setPort(port);
+    } catch (e) {
+      throw ToolOperationException('Failed to set ADB port: $e');
     }
   }
 }

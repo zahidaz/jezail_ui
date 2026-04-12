@@ -39,7 +39,7 @@ class AppSidebar extends StatelessWidget {
           Expanded(
             child: ListView.builder(
               padding: EdgeInsets.symmetric(
-                horizontal: collapsed ? 8 : 8,
+                horizontal: 8,
                 vertical: 4,
               ),
               itemCount: tabs.length,

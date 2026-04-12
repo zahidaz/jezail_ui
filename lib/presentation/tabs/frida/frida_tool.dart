@@ -1,26 +1,12 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
+import 'package:go_router/go_router.dart';
+import 'package:url_launcher/url_launcher.dart';
+import 'package:jezail_ui/app_config.dart';
 import 'package:jezail_ui/core/extensions/snackbar_extensions.dart';
 import 'package:jezail_ui/models/tools/frida_info.dart';
 import 'package:jezail_ui/models/tools/frida_status.dart';
 import 'package:jezail_ui/repositories/frida_repository.dart';
-
-class _StatusItem {
-  final String label;
-  final String value;
-  final Color? color;
-  final bool isPath;
-
-  _StatusItem(this.label, this.value, [this.color, this.isPath = false]);
-}
-
-class _ActionButton {
-  final String label;
-  final IconData icon;
-  final VoidCallback? onPressed;
-
-  _ActionButton(this.label, this.icon, this.onPressed);
-}
+import 'package:jezail_ui/presentation/widgets/tool_status_card.dart';
 
 class FridaTab extends StatefulWidget {
   final FridaRepository repository;
@@ -114,195 +100,146 @@ class _FridaTabState extends State<FridaTab> {
     }
   }
 
-  List<_StatusItem> _getStatusItems() {
-    final items = <_StatusItem>[];
+  void _showConfigDialog() async {
+    Map<String, dynamic>? config;
+    try {
+      config = await widget.repository.getConfig();
+    } catch (e) {
+      if (mounted) context.showErrorSnackBar('Failed to load config: $e');
+      return;
+    }
+    if (!mounted) return;
+
+    final portController = TextEditingController(text: config['port']?.toString() ?? '');
+    final binaryController = TextEditingController(text: config['binaryName']?.toString() ?? '');
+
+    try {
+      final result = await showDialog<Map<String, dynamic>>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('Frida Configuration'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: portController,
+                keyboardType: TextInputType.number,
+                decoration: const InputDecoration(
+                  labelText: 'Port',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: binaryController,
+                decoration: const InputDecoration(
+                  labelText: 'Binary Name',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Cancel'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.of(context).pop({
+                'port': int.tryParse(portController.text) ?? config!['port'],
+                'binaryName': binaryController.text,
+              }),
+              child: const Text('Save'),
+            ),
+          ],
+        ),
+      );
+
+    if (result != null && mounted) {
+      setState(() => isLoading = true);
+      try {
+        await widget.repository.updateConfig(result);
+        await _loadStatus();
+        if (mounted) context.showSuccessSnackBar('Frida config updated');
+      } catch (e) {
+        if (mounted) context.showErrorSnackBar('Failed to update config: $e');
+      } finally {
+        if (mounted) setState(() => isLoading = false);
+      }
+    }
+    } finally {
+      portController.dispose();
+      binaryController.dispose();
+    }
+  }
+
+  List<StatusItem> _getStatusItems() {
+    final items = <StatusItem>[];
     if (fridaStatus != null) {
       items.addAll([
-        _StatusItem(
+        StatusItem(
           'Status',
           fridaStatus!.isRunning ? 'Running' : 'Stopped',
           fridaStatus!.isRunning ? Colors.green : Colors.orange,
         ),
-        _StatusItem('Port', fridaStatus!.port),
-        _StatusItem('Installed Version', fridaStatus!.version),
+        StatusItem('Port', fridaStatus!.port),
+        StatusItem('Installed Version', fridaStatus!.version),
       ]);
     }
     if (fridaInfo != null) {
       items.addAll([
-        _StatusItem('Current Version', fridaInfo!.currentVersion),
-        _StatusItem('Latest Version', fridaInfo!.latestVersion),
-        _StatusItem(
+        StatusItem('Current Version', fridaInfo!.currentVersion),
+        StatusItem('Latest Version', fridaInfo!.latestVersion),
+        StatusItem(
           'Needs Update',
           fridaInfo!.needsUpdate ? 'Yes' : 'No',
           fridaInfo!.needsUpdate ? Colors.orange : Colors.green,
         ),
-        _StatusItem('Install Path', fridaInfo!.installPath, null, true),
+        StatusItem('Install Path', fridaInfo!.installPath, null, true, () {
+          final dirPath = fridaInfo!.installPath;
+          final parentPath = dirPath.contains('/')
+              ? dirPath.substring(0, dirPath.lastIndexOf('/'))
+              : dirPath;
+          context.go('/files?path=${Uri.encodeComponent(parentPath)}');
+        }),
       ]);
     }
     return items;
   }
 
-  List<_ActionButton> _getActions() {
+  @override
+  Widget build(BuildContext context) {
     final installed = fridaStatus?.version != 'not installed';
     final running = fridaStatus?.isRunning == true;
     final needsUpdate = fridaInfo?.needsUpdate == true;
-    return [
-      if (!installed)
-        _ActionButton(
-          'Install',
-          Icons.download,
-          isLoading ? null : _installFrida,
-        ),
-      if (installed && !running)
-        _ActionButton(
-          'Start',
-          Icons.play_arrow,
-          isLoading ? null : _startFrida,
-        ),
-      if (running)
-        _ActionButton('Stop', Icons.stop, isLoading ? null : _stopFrida),
-      if (needsUpdate)
-        _ActionButton('Update', Icons.update, isLoading ? null : _updateFrida),
-    ];
-  }
 
-  @override
-  Widget build(BuildContext context) {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(16.0),
-      child: Center(
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 600),
-          child: Card(
-            child: Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  ListTile(
-                    contentPadding: EdgeInsets.zero,
-                    leading: Icon(
-                      Icons.api,
-                      color: Theme.of(context).colorScheme.primary,
-                    ),
-                    title: Text(
-                      'Frida',
-                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    subtitle: Text('Dynamic Instrumentation Toolkit'),
-                    trailing: IconButton(
-                      onPressed: isLoading ? null : _loadStatus,
-                      icon: const Icon(Icons.refresh),
-                      tooltip: 'Refresh Frida status',
-                    ),
-                  ),
-                  if (_getStatusItems().isNotEmpty) ...[
-                    const SizedBox(height: 8),
-                    ..._getStatusItems().map(
-                      (item) => Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 2.0),
-                        child: Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            SizedBox(
-                              width: 120,
-                              child: Text(
-                                '${item.label}:',
-                                style: Theme.of(context).textTheme.bodySmall
-                                    ?.copyWith(fontWeight: FontWeight.w600),
-                              ),
-                            ),
-                            Expanded(
-                              child: item.isPath
-                                  ? GestureDetector(
-                                      onTap: () {
-                                        Clipboard.setData(
-                                          ClipboardData(text: item.value),
-                                        );
-                                        context.showSuccessSnackBar(
-                                          'Path copied to clipboard',
-                                        );
-                                      },
-                                      child: Row(
-                                        children: [
-                                          Flexible(
-                                            child: Text(
-                                              item.value,
-                                              style: Theme.of(context)
-                                                  .textTheme
-                                                  .bodySmall
-                                                  ?.copyWith(
-                                                    color: Theme.of(
-                                                      context,
-                                                    ).colorScheme.primary,
-                                                    fontWeight: FontWeight.w500,
-                                                  ),
-                                              overflow: TextOverflow.ellipsis,
-                                            ),
-                                          ),
-                                          const SizedBox(width: 6),
-                                          Icon(
-                                            Icons.copy,
-                                            size: 16,
-                                            color: Theme.of(
-                                              context,
-                                            ).colorScheme.primary,
-                                          ),
-                                        ],
-                                      ),
-                                    )
-                                  : Text(
-                                      item.value,
-                                      style: Theme.of(context)
-                                          .textTheme
-                                          .bodySmall
-                                          ?.copyWith(
-                                            color:
-                                                item.color ??
-                                                Theme.of(
-                                                  context,
-                                                ).colorScheme.onSurface,
-                                            fontWeight: FontWeight.w500,
-                                          ),
-                                    ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                  ],
-                  if (_getActions().isNotEmpty)
-                    Wrap(
-                      spacing: 8,
-                      runSpacing: 8,
-                      children: _getActions()
-                          .map(
-                            (action) => ActionChip(
-                              avatar: Icon(action.icon, size: 18),
-                              label: Text(action.label),
-                              onPressed: action.onPressed,
-                              backgroundColor: Theme.of(
-                                context,
-                              ).colorScheme.secondaryContainer,
-                              labelStyle: TextStyle(
-                                color: Theme.of(
-                                  context,
-                                ).colorScheme.onSecondaryContainer,
-                                fontSize: 12,
-                              ),
-                            ),
-                          )
-                          .toList(),
-                    ),
-                ],
-              ),
-            ),
+    return ToolStatusCard(
+      title: 'Frida',
+      subtitle: 'Dynamic Instrumentation Toolkit',
+      icon: Icons.api,
+      isLoading: isLoading,
+      onRefresh: _loadStatus,
+      showLoadingIndicator: true,
+      statusItems: _getStatusItems(),
+      actions: [
+        if (!installed)
+          ActionButton('Install', Icons.download, isLoading ? null : _installFrida),
+        if (installed && !running)
+          ActionButton('Start', Icons.play_arrow, isLoading ? null : _startFrida),
+        if (running)
+          ActionButton('Stop', Icons.stop, isLoading ? null : _stopFrida),
+        if (needsUpdate)
+          ActionButton('Update', Icons.update, isLoading ? null : _updateFrida),
+        ActionButton('Config', Icons.settings, isLoading ? null : _showConfigDialog),
+        ActionButton(
+          'Refrida',
+          Icons.code,
+          () => launchUrl(
+            Uri.parse('${AppConfig.baseUrl}/refrida'),
+            mode: LaunchMode.externalApplication,
           ),
         ),
-      ),
+      ],
     );
   }
 }

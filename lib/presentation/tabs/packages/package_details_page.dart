@@ -1,15 +1,22 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
+import 'package:web/web.dart' as web;
 import 'package:jezail_ui/models/packages/package_info.dart';
 import 'package:jezail_ui/repositories/package_repository.dart';
+import 'package:jezail_ui/services/device_service.dart';
 import 'package:jezail_ui/core/enums/package_enums.dart';
 import 'package:jezail_ui/core/extensions/snackbar_extensions.dart';
 import 'package:jezail_ui/presentation/tabs/packages/package_list_page.dart';
+import 'package:jezail_ui/presentation/tabs/packages/widgets/package_info_widgets.dart';
+import 'package:jezail_ui/presentation/tabs/packages/widgets/package_component_item.dart';
+import 'package:jezail_ui/presentation/widgets/collapsible_card.dart';
 
 class PackageDetailsPage extends StatefulWidget {
   final PackageInfo? package;
   final PackageRepository repository;
+  final DeviceService? deviceService;
   final Function(PackageAction, PackageInfo) onPackageAction;
   final VoidCallback onBack;
 
@@ -17,6 +24,7 @@ class PackageDetailsPage extends StatefulWidget {
     super.key,
     this.package,
     required this.repository,
+    this.deviceService,
     required this.onPackageAction,
     required this.onBack,
   });
@@ -30,18 +38,45 @@ class _PackageDetailsPageState extends State<PackageDetailsPage> {
   Map<String, dynamic>? _permissions;
   Map<String, dynamic>? _signatures;
   Map<String, dynamic>? _processInfo;
+  List<String>? _appOps;
   bool? _isDebuggable;
   bool? _isRunning;
 
   final Map<String, bool> _sectionLoading = {};
   final Map<String, String?> _sectionErrors = {};
+  final Map<String, bool> _actionLoading = {};
   String _searchQuery = '';
+  Timer? _searchDebounce;
   final Set<String> _expandedSections = {};
 
   @override
   void initState() {
     super.initState();
     if (widget.package != null) {
+      _loadPackageData();
+    }
+  }
+
+  @override
+  void dispose() {
+    _searchDebounce?.cancel();
+    super.dispose();
+  }
+
+  @override
+  void didUpdateWidget(PackageDetailsPage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.package?.packageName != oldWidget.package?.packageName && widget.package != null) {
+      _details = null;
+      _permissions = null;
+      _signatures = null;
+      _processInfo = null;
+      _appOps = null;
+      _isDebuggable = null;
+      _isRunning = null;
+      _sectionLoading.clear();
+      _sectionErrors.clear();
+      _expandedSections.clear();
       _loadPackageData();
     }
   }
@@ -70,6 +105,12 @@ class _PackageDetailsPageState extends State<PackageDetailsPage> {
       'debuggable',
       () => widget.repository.isPackageDebuggable(packageName),
     );
+    if (widget.deviceService != null) {
+      _loadSection(
+        'appOps',
+        () => widget.deviceService!.getAppOps(packageName),
+      );
+    }
     _loadSection(
       'running',
       () => widget.repository.isPackageRunning(packageName),
@@ -109,6 +150,9 @@ class _PackageDetailsPageState extends State<PackageDetailsPage> {
             case 'running':
               _isRunning = result;
               break;
+            case 'appOps':
+              _appOps = List<String>.from(result['data'] ?? []);
+              break;
           }
           _sectionLoading[section] = false;
         });
@@ -119,6 +163,7 @@ class _PackageDetailsPageState extends State<PackageDetailsPage> {
           _sectionLoading[section] = false;
           _sectionErrors[section] = e.toString();
         });
+        context.showErrorSnackBar('Failed to load $section');
       }
     }
   }
@@ -160,6 +205,10 @@ class _PackageDetailsPageState extends State<PackageDetailsPage> {
                   const SizedBox(height: 16),
                   _buildProcessInfoCard(),
                 ],
+                if (_appOps != null) ...[
+                  const SizedBox(height: 16),
+                  _buildAppOpsSection(),
+                ],
               ],
             ),
           ),
@@ -194,72 +243,72 @@ class _PackageDetailsPageState extends State<PackageDetailsPage> {
         color: cs.surface,
         border: Border(bottom: BorderSide(color: cs.outline.withAlpha(25))),
       ),
-      child: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          IconButton(
-            onPressed: widget.onBack,
-            icon: const Icon(Icons.arrow_back, size: 20),
-          ),
-          const SizedBox(width: 12),
-          _buildPackageIcon(),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  pkg.name,
-                  style: const TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w600,
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                const SizedBox(height: 2),
-                Row(
+          Row(
+            children: [
+              IconButton(
+                onPressed: widget.onBack,
+                icon: const Icon(Icons.arrow_back, size: 20),
+              ),
+              const SizedBox(width: 12),
+              _buildPackageIcon(),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Expanded(
-                      child: Row(
-                        children: [
-                          Flexible(
-                            child: Text(
-                              pkg.packageName,
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: cs.onSurfaceVariant,
-                                fontFamily: 'monospace',
-                              ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-                          const SizedBox(width: 4),
-                          MouseRegion(
-                            cursor: SystemMouseCursors.click,
-                            child: GestureDetector(
-                              onTap: () =>
-                                  _copy(pkg.packageName, 'Package name'),
-                              child: Container(
-                                padding: const EdgeInsets.all(2),
-                                child: Icon(
-                                  Icons.copy,
-                                  size: 14,
-                                  color: cs.onSurfaceVariant,
-                                ),
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          _buildHeaderBadges(),
-                        ],
+                    Text(
+                      pkg.name,
+                      style: const TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w600,
                       ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: 2),
+                    Row(
+                      children: [
+                        Flexible(
+                          child: Text(
+                            pkg.packageName,
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: cs.onSurfaceVariant,
+                              fontFamily: 'monospace',
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                        const SizedBox(width: 4),
+                        MouseRegion(
+                          cursor: SystemMouseCursors.click,
+                          child: GestureDetector(
+                            onTap: () =>
+                                _copy(pkg.packageName, 'Package name'),
+                            child: Container(
+                              padding: const EdgeInsets.all(2),
+                              child: Icon(
+                                Icons.copy,
+                                size: 14,
+                                color: cs.onSurfaceVariant,
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        _buildHeaderBadges(),
+                      ],
                     ),
                   ],
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
+          const SizedBox(height: 12),
           _buildQuickActions(),
         ],
       ),
@@ -275,10 +324,11 @@ class _PackageDetailsPageState extends State<PackageDetailsPage> {
     final pkg = widget.package!;
     final isRunning = _isRunning ?? pkg.isRunning;
 
-    return Row(
-      mainAxisSize: MainAxisSize.min,
+    return Wrap(
+      spacing: 8,
+      runSpacing: 8,
       children: [
-        if (pkg.canLaunch) ...[
+        if (pkg.canLaunch)
           _buildActionButton(
             isRunning ? 'Stop' : 'Start',
             isRunning ? Icons.stop : Icons.play_arrow,
@@ -287,66 +337,71 @@ class _PackageDetailsPageState extends State<PackageDetailsPage> {
               final action = isRunning
                   ? PackageAction.stop
                   : PackageAction.start;
-              setState(() {
-                _isRunning = !isRunning;
-              });
+              if (mounted) setState(() => _sectionLoading['running'] = true);
               try {
                 await widget.onPackageAction(action, pkg);
                 await Future.delayed(const Duration(milliseconds: 500));
-                _loadSection(
+                await _loadSection(
                   'running',
                   () => widget.repository.isPackageRunning(pkg.packageName),
                 );
               } catch (e) {
-                if (mounted) {
-                  setState(() {
-                    _isRunning = isRunning;
-                  });
-                }
+                if (mounted) setState(() => _sectionLoading['running'] = false);
               }
             },
             isLoading: _sectionLoading['running'] == true,
           ),
-          const SizedBox(width: 8),
-        ],
         _buildActionButton(
           'Clear Cache',
           Icons.cached,
           Colors.orange,
           _clearCache,
+          isLoading: _actionLoading['clearCache'] == true,
         ),
-        const SizedBox(width: 8),
         _buildActionButton(
           'Clear Data',
           Icons.delete_sweep,
           Colors.red,
           _clearData,
+          isLoading: _actionLoading['clearData'] == true,
         ),
-        const SizedBox(width: 8),
+        _buildActionButton(
+          'Download',
+          Icons.download,
+          Colors.blue,
+          _downloadApk,
+        ),
+        _buildActionButton(
+          'Backup',
+          Icons.backup,
+          Colors.teal,
+          _backupApp,
+        ),
+        if (pkg.canLaunch)
+          _buildActionButton(
+            'Foreground',
+            Icons.open_in_new,
+            Colors.indigo,
+            _bringToForeground,
+            isLoading: _actionLoading['foreground'] == true,
+          ),
         _buildActionButton('Uninstall', Icons.delete, Colors.red, () async {
           try {
             await widget.onPackageAction(PackageAction.uninstall, pkg);
-            // Navigate back to list page after successful uninstall
             if (mounted) {
               widget.onBack();
             }
-          } catch (e) {
-            // Error is already handled by the parent's onPackageAction
-          }
+          } catch (_) {}
         }),
-        const SizedBox(width: 8),
-        MouseRegion(
-          cursor: SystemMouseCursors.click,
-          child: Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: cs.surface,
+        IconButton(
+          onPressed: _loadPackageData,
+          icon: Icon(Icons.refresh, color: cs.primary, size: 20),
+          tooltip: 'Refresh package data',
+          style: IconButton.styleFrom(
+            backgroundColor: cs.surface,
+            shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: cs.outline.withAlpha(25)),
-            ),
-            child: GestureDetector(
-              onTap: _loadPackageData,
-              child: Icon(Icons.refresh, color: cs.primary, size: 20),
+              side: BorderSide(color: cs.outline.withAlpha(25)),
             ),
           ),
         ),
@@ -358,30 +413,33 @@ class _PackageDetailsPageState extends State<PackageDetailsPage> {
     final pkg = widget.package!;
     final isDebuggable = _isDebuggable;
     final hasDebugCert =
-        _signatures?['signatures']?.first?['subject']?.contains('Debug') ??
+        ((_signatures?['signatures'] as List?)?.firstOrNull as Map?)?['subject']?.toString().contains('Debug') ??
         false;
 
-    return Row(
-      mainAxisSize: MainAxisSize.min,
+    return Wrap(
+      spacing: 4,
+      runSpacing: 4,
       children: [
-        _buildBadge(
-          pkg.isSystemApp ? 'System' : 'User',
-          true,
-          pkg.isSystemApp ? Colors.orange : Colors.blue,
-          pkg.isSystemApp ? Icons.settings : Icons.person,
+        PackageBadge(
+          label: pkg.isSystemApp ? 'System' : 'User',
+          value: true,
+          color: pkg.isSystemApp ? Colors.orange : Colors.blue,
+          icon: pkg.isSystemApp ? Icons.settings : Icons.person,
         ),
-        SizedBox(width: 4),
         if (isDebuggable != null)
-          _buildBadge(
-            'Debuggable',
-            isDebuggable,
-            isDebuggable ? Colors.red : Colors.green,
-            isDebuggable ? Icons.bug_report : Icons.verified_user,
+          PackageBadge(
+            label: 'Debuggable',
+            value: isDebuggable,
+            color: isDebuggable ? Colors.red : Colors.green,
+            icon: isDebuggable ? Icons.bug_report : Icons.verified_user,
           ),
-        if (isDebuggable != null) const SizedBox(width: 4),
-        if (hasDebugCert) ...[
-          _buildBadge('Debug Cert', true, Colors.red, Icons.warning),
-        ],
+        if (hasDebugCert)
+          const PackageBadge(
+            label: 'Debug Cert',
+            value: true,
+            color: Colors.red,
+            icon: Icons.warning,
+          ),
       ],
     );
   }
@@ -407,8 +465,12 @@ class _PackageDetailsPageState extends State<PackageDetailsPage> {
             const SizedBox(width: 12),
             Expanded(
               child: TextField(
-                onChanged: (value) =>
-                    setState(() => _searchQuery = value.toLowerCase()),
+                onChanged: (value) {
+                  _searchDebounce?.cancel();
+                  _searchDebounce = Timer(const Duration(milliseconds: 300), () {
+                    if (mounted) setState(() => _searchQuery = value.toLowerCase());
+                  });
+                },
                 decoration: InputDecoration(
                   hintText: 'Search package information...',
                   border: InputBorder.none,
@@ -429,49 +491,34 @@ class _PackageDetailsPageState extends State<PackageDetailsPage> {
   }
 
   Widget _buildVersionInstallSection() {
+    final version = _details?['versionName'] ?? 'Unknown';
+    final versionCode = _details?['versionCode']?.toString() ?? 'Unknown';
+    final firstInstall = _formatTimestamp(_details?['firstInstallTime']);
+    final lastUpdate = _formatTimestamp(_details?['lastUpdateTime']);
     return _buildCollapsibleCard('Versions', Icons.tag, 'version_install', [
-      _buildInfoRow('Version', _details?['versionName'] ?? 'Unknown'),
-      _buildInfoRow(
-        'Version Code',
-        _details?['versionCode']?.toString() ?? 'Unknown',
-      ),
-      _buildInfoRow(
-        'First Install',
-        _formatTimestamp(_details?['firstInstallTime']),
-      ),
-      _buildInfoRow(
-        'Last Update',
-        _formatTimestamp(_details?['lastUpdateTime']),
-      ),
-    ]);
+      PackageInfoRow(label: 'Version', value: version),
+      PackageInfoRow(label: 'Version Code', value: versionCode),
+      PackageInfoRow(label: 'First Install', value: firstInstall),
+      PackageInfoRow(label: 'Last Update', value: lastUpdate),
+    ], searchableContent: '$version $versionCode $firstInstall $lastUpdate');
   }
 
   Widget _buildTechnicalInfoSection() {
+    final targetSdk = _details?['applicationInfo']?['targetSdkVersion']?.toString() ?? 'Unknown';
+    final minSdk = _details?['applicationInfo']?['minSdkVersion']?.toString() ?? 'Unknown';
+    final compileSdk = _details?['applicationInfo']?['compileSdkVersion']?.toString() ?? 'Unknown';
+    final uid = _details?['applicationInfo']?['uid']?.toString() ?? 'Unknown';
     return _buildCollapsibleCard(
       'Runtime',
       Icons.developer_mode,
       'technical_info',
       [
-        _buildInfoRow(
-          'Target SDK',
-          _details?['applicationInfo']?['targetSdkVersion']?.toString() ??
-              'Unknown',
-        ),
-        _buildInfoRow(
-          'Min SDK',
-          _details?['applicationInfo']?['minSdkVersion']?.toString() ??
-              'Unknown',
-        ),
-        _buildInfoRow(
-          'Compile SDK',
-          _details?['applicationInfo']?['compileSdkVersion']?.toString() ??
-              'Unknown',
-        ),
-        _buildInfoRow(
-          'UID',
-          _details?['applicationInfo']?['uid']?.toString() ?? 'Unknown',
-        ),
+        PackageInfoRow(label: 'Target SDK', value: targetSdk),
+        PackageInfoRow(label: 'Min SDK', value: minSdk),
+        PackageInfoRow(label: 'Compile SDK', value: compileSdk),
+        PackageInfoRow(label: 'UID', value: uid),
       ],
+      searchableContent: '$targetSdk $minSdk $compileSdk $uid',
     );
   }
 
@@ -479,40 +526,37 @@ class _PackageDetailsPageState extends State<PackageDetailsPage> {
     final pkg = widget.package!;
     final isDebuggable = _isDebuggable;
     final hasDebugCert =
-        _signatures?['signatures']?.first?['subject']?.contains('Debug') ??
+        ((_signatures?['signatures'] as List?)?.firstOrNull as Map?)?['subject']?.toString().contains('Debug') ??
         false;
 
+    final debuggableText = isDebuggable != null ? (isDebuggable ? 'YES' : 'NO') : 'Unknown';
+    final debugCertText = hasDebugCert ? 'YES' : 'NO';
+    final systemAppText = pkg.isSystemApp ? 'YES' : 'NO';
+    final enabledText = _details?['applicationInfo']?['enabled'] == true ? 'YES' : 'NO';
     return _buildCollapsibleCard('Security', Icons.security, 'security_info', [
-      _buildInfoRow(
-        'Debuggable',
-        isDebuggable != null ? (isDebuggable ? 'YES' : 'NO') : 'Unknown',
-      ),
-      _buildInfoRow('Debug Certificate', hasDebugCert ? 'YES' : 'NO'),
-      _buildInfoRow('System App', pkg.isSystemApp ? 'YES' : 'NO'),
-      _buildInfoRow(
-        'Enabled',
-        _details?['applicationInfo']?['enabled'] == true ? 'YES' : 'NO',
-      ),
-    ]);
+      PackageInfoRow(label: 'Debuggable', value: debuggableText),
+      PackageInfoRow(label: 'Debug Certificate', value: debugCertText),
+      PackageInfoRow(label: 'System App', value: systemAppText),
+      PackageInfoRow(label: 'Enabled', value: enabledText),
+    ], searchableContent: 'debuggable $debuggableText debug certificate $debugCertText system $systemAppText enabled $enabledText');
   }
 
   Widget _buildFileSystemInfoSection() {
+    final dataDir = _details?['applicationInfo']?['dataDir']?.toString() ?? '';
+    final nativeLibDir = _details?['applicationInfo']?['nativeLibraryDir']?.toString() ?? '';
+    final sourceDir = _details?['applicationInfo']?['sourceDir']?.toString() ?? '';
+    final publicSourceDir = _details?['applicationInfo']?['publicSourceDir']?.toString() ?? '';
     return _buildCollapsibleCard(
       'Filesystem',
       Icons.folder_outlined,
       'filesystem_info',
       [
-        _buildPathRow('Data Dir', _details?['applicationInfo']?['dataDir']),
-        _buildPathRow(
-          'Native Lib Dir',
-          _details?['applicationInfo']?['nativeLibraryDir'],
-        ),
-        _buildPathRow('Source Dir', _details?['applicationInfo']?['sourceDir']),
-        _buildPathRow(
-          'Public Source',
-          _details?['applicationInfo']?['publicSourceDir'],
-        ),
+        PackagePathRow(label: 'Data Dir', path: _details?['applicationInfo']?['dataDir'], onOpenInFileExplorer: _openInFileExplorer),
+        PackagePathRow(label: 'Native Lib Dir', path: _details?['applicationInfo']?['nativeLibraryDir'], onOpenInFileExplorer: _openInFileExplorer),
+        PackagePathRow(label: 'Source Dir', path: _details?['applicationInfo']?['sourceDir'], onOpenInFileExplorer: _openInFileExplorer),
+        PackagePathRow(label: 'Public Source', path: _details?['applicationInfo']?['publicSourceDir'], onOpenInFileExplorer: _openInFileExplorer),
       ],
+      searchableContent: '$dataDir $nativeLibDir $sourceDir $publicSourceDir',
     );
   }
 
@@ -534,149 +578,66 @@ class _PackageDetailsPageState extends State<PackageDetailsPage> {
               ),
             ]
           : [
-              _buildInfoRow('PID', processData['pid']?.toString() ?? 'Unknown'),
-              _buildInfoRow(
-                'CPU Stats Available',
-                processData['cpu_stat_available'] == true ? 'YES' : 'NO',
+              PackageInfoRow(label: 'PID', value: processData['pid']?.toString() ?? 'Unknown'),
+              PackageInfoRow(
+                label: 'CPU Stats Available',
+                value: processData['cpu_stat_available'] == true ? 'YES' : 'NO',
               ),
-              _buildInfoRow('VM Peak', processData['VmPeak'] ?? 'Unknown'),
-              _buildInfoRow('VM Size', processData['VmSize'] ?? 'Unknown'),
-              _buildInfoRow('VM RSS', processData['VmRSS'] ?? 'Unknown'),
+              PackageInfoRow(label: 'VM Peak', value: processData['VmPeak'] ?? 'Unknown'),
+              PackageInfoRow(label: 'VM Size', value: processData['VmSize'] ?? 'Unknown'),
+              PackageInfoRow(label: 'VM RSS', value: processData['VmRSS'] ?? 'Unknown'),
             ],
     );
   }
 
   Widget _buildActivitiesSection() {
-    final activities = List<Map<String, dynamic>>.from(
-      _details?['activities'] ?? [],
-    );
+    final activities = (_details?['activities'] as List?)
+        ?.whereType<Map<String, dynamic>>()
+        .toList() ?? [];
 
     return _buildCollapsibleCard(
       'Activities',
       Icons.launch,
       'activities',
       activities
-          .map((activity) => _buildComponentItem(activity, 'Activity'))
+          .map((activity) => PackageComponentItem(component: activity, type: 'Activity'))
           .toList(),
       count: activities.length,
+      searchableContent: activities.map((a) => a['name']?.toString() ?? '').join(' '),
     );
   }
 
   Widget _buildProvidersSection() {
-    final providers = List<Map<String, dynamic>>.from(
-      _details?['providers'] ?? [],
-    );
+    final providers = (_details?['providers'] as List?)
+        ?.whereType<Map<String, dynamic>>()
+        .toList() ?? [];
 
     return _buildCollapsibleCard(
       'Providers',
       Icons.cloud_outlined,
       'providers',
       providers
-          .map((provider) => _buildComponentItem(provider, 'Provider'))
+          .map((provider) => PackageComponentItem(component: provider, type: 'Provider'))
           .toList(),
       count: providers.length,
+      searchableContent: providers.map((p) => p['name']?.toString() ?? '').join(' '),
     );
   }
 
   Widget _buildReceiversSection() {
-    final receivers = List<Map<String, dynamic>>.from(
-      _details?['receivers'] ?? [],
-    );
+    final receivers = (_details?['receivers'] as List?)
+        ?.whereType<Map<String, dynamic>>()
+        .toList() ?? [];
 
     return _buildCollapsibleCard(
       'Receivers',
       Icons.sensors,
       'receivers',
       receivers
-          .map((receiver) => _buildComponentItem(receiver, 'Receiver'))
+          .map((receiver) => PackageComponentItem(component: receiver, type: 'Receiver'))
           .toList(),
       count: receivers.length,
-    );
-  }
-
-  Widget _buildComponentItem(Map<String, dynamic> component, String type) {
-    final cs = Theme.of(context).colorScheme;
-    final name = component['name'] ?? 'Unknown';
-    final exported = component['exported'] == true;
-    final enabled = component['enabled'] == true;
-
-    return Container(
-      margin: const EdgeInsets.symmetric(vertical: 4),
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: cs.surfaceContainerHigh,
-        borderRadius: BorderRadius.circular(6),
-        border: Border.all(color: cs.outline.withAlpha(15)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Expanded(
-                child: Text(
-                  name.split('.').last,
-                  style: const TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w600,
-                    fontFamily: 'monospace',
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ),
-              if (exported)
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 4,
-                    vertical: 1,
-                  ),
-                  decoration: BoxDecoration(
-                    color: Colors.red.withAlpha(25),
-                    borderRadius: BorderRadius.circular(3),
-                  ),
-                  child: const Text(
-                    'EXPORTED',
-                    style: TextStyle(
-                      fontSize: 8,
-                      fontWeight: FontWeight.w600,
-                      color: Colors.red,
-                    ),
-                  ),
-                ),
-              const SizedBox(width: 4),
-              if (!enabled)
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 4,
-                    vertical: 1,
-                  ),
-                  decoration: BoxDecoration(
-                    color: Colors.red.withAlpha(25),
-                    borderRadius: BorderRadius.circular(3),
-                  ),
-                  child: const Text(
-                    'DISABLED',
-                    style: TextStyle(
-                      fontSize: 8,
-                      fontWeight: FontWeight.w600,
-                      color: Colors.red,
-                    ),
-                  ),
-                ),
-            ],
-          ),
-          const SizedBox(height: 4),
-          Text(
-            name,
-            style: TextStyle(
-              fontSize: 11,
-              color: cs.onSurfaceVariant,
-              fontFamily: 'monospace',
-            ),
-          ),
-        ],
-      ),
+      searchableContent: receivers.map((r) => r['name']?.toString() ?? '').join(' '),
     );
   }
 
@@ -686,12 +647,13 @@ class _PackageDetailsPageState extends State<PackageDetailsPage> {
     String sectionKey,
     List<Widget> children, {
     int? count,
+    String? searchableContent,
   }) {
     final cs = Theme.of(context).colorScheme;
     final isExpanded = _expandedSections.contains(sectionKey);
 
     if (_searchQuery.isNotEmpty) {
-      final searchText = '$title ${children.toString()}'.toLowerCase();
+      final searchText = '$title ${searchableContent ?? ''}'.toLowerCase();
       if (!searchText.contains(_searchQuery)) {
         return const SizedBox.shrink();
       }
@@ -699,187 +661,79 @@ class _PackageDetailsPageState extends State<PackageDetailsPage> {
 
     final displayTitle = count != null ? '$title ($count)' : title;
 
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
-      decoration: BoxDecoration(
-        color: cs.surface,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: cs.outline.withAlpha(25)),
-      ),
-      child: Column(
-        children: [
-          InkWell(
-            onTap: () => setState(() {
-              if (isExpanded) {
-                _expandedSections.remove(sectionKey);
-              } else {
-                _expandedSections.add(sectionKey);
-              }
-            }),
-            child: Padding(
-              padding: const EdgeInsets.all(12),
-              child: Row(
-                children: [
-                  Container(
-                    width: 32,
-                    height: 32,
-                    decoration: BoxDecoration(
-                      color: cs.primaryContainer,
-                      borderRadius: BorderRadius.circular(6),
-                    ),
-                    child: Center(
-                      child: Icon(icon, size: 16, color: cs.onPrimaryContainer),
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          displayTitle,
-                          style: const TextStyle(
-                            fontWeight: FontWeight.w600,
-                            fontSize: 14,
-                          ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                        const SizedBox(height: 2),
-                        Text(
-                          '${children.length} ${children.length == 1 ? 'item' : 'items'}',
-                          style: TextStyle(
-                            fontSize: 11,
-                            color: cs.onSurfaceVariant,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Icon(
-                    isExpanded
-                        ? Icons.keyboard_arrow_up
-                        : Icons.keyboard_arrow_down,
-                    color: cs.onSurfaceVariant,
-                    size: 20,
-                  ),
-                ],
-              ),
-            ),
+    return CollapsibleCard(
+      title: displayTitle,
+      icon: icon,
+      isExpanded: isExpanded,
+      onToggle: () => setState(() {
+        if (isExpanded) {
+          _expandedSections.remove(sectionKey);
+        } else {
+          _expandedSections.add(sectionKey);
+        }
+      }),
+      subtitle: '${children.length} ${children.length == 1 ? 'item' : 'items'}',
+      children: [
+        Text(
+          '$title Details',
+          style: TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.w600,
+            color: cs.primary,
           ),
-          if (isExpanded) ...[
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-              decoration: BoxDecoration(
-                color: cs.surfaceContainerHighest.withAlpha(25),
-                borderRadius: const BorderRadius.only(
-                  bottomLeft: Radius.circular(8),
-                  bottomRight: Radius.circular(8),
-                ),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Container(
-                    height: 1,
-                    color: cs.outline.withAlpha(25),
-                    margin: const EdgeInsets.only(bottom: 12),
-                  ),
-                  Text(
-                    '$title Details',
-                    style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                      color: cs.primary,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  ...children,
-                ],
-              ),
-            ),
-          ],
-        ],
-      ),
-    );
-  }
-
-  Widget _buildPathRow(String label, String? path) {
-    if (path == null || path.isEmpty) return _buildInfoRow(label, 'Unknown');
-
-    final cs = Theme.of(context).colorScheme;
-
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          SizedBox(
-            width: 120,
-            child: Text(
-              label,
-              style: TextStyle(
-                fontWeight: FontWeight.w500,
-                fontSize: 13,
-                color: cs.onSurfaceVariant,
-              ),
-            ),
-          ),
-          Expanded(
-            child: MouseRegion(
-              cursor: SystemMouseCursors.click,
-              child: GestureDetector(
-                onTap: () => _openInFileExplorer(path),
-                child: Text(
-                  _formatPath(path),
-                  style: TextStyle(
-                    fontFamily: 'monospace',
-                    fontSize: 13,
-                    color: cs.primary,
-                    decoration: TextDecoration.underline,
-                  ),
-                ),
-              ),
-            ),
-          ),
-          GestureDetector(
-            onTap: () => _openInFileExplorer(path),
-            child: Icon(Icons.folder_open, size: 14, color: cs.primary),
-          ),
-        ],
-      ),
+        ),
+        const SizedBox(height: 8),
+        ...children,
+      ],
     );
   }
 
   void _openInFileExplorer(String path) {
-    context.go('/files?path=$path');
+    context.go('/files?path=${Uri.encodeComponent(path)}');
   }
 
-  Widget _buildBadge(String label, bool value, Color color, IconData icon) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration: BoxDecoration(
-        color: color.withAlpha(25),
-        borderRadius: BorderRadius.circular(6),
-        border: Border.all(color: color.withAlpha(0)),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, size: 8, color: color),
-          const SizedBox(width: 4),
-          Text(
-            label,
-            style: TextStyle(
-              fontSize: 10,
-              fontWeight: FontWeight.w400,
-              color: color,
-            ),
-          ),
-        ],
-      ),
+  void _downloadApk() {
+    if (widget.package == null) return;
+    final url = widget.repository.getApkDownloadUrl(widget.package!.packageName);
+    final anchor = web.HTMLAnchorElement()
+      ..href = url
+      ..download = '${widget.package!.packageName}.apk';
+    anchor.click();
+    context.showSuccessSnackBar('APK download started');
+  }
+
+  void _backupApp() {
+    if (widget.package == null) return;
+    final url = widget.repository.getBackupUrl(widget.package!.packageName);
+    final anchor = web.HTMLAnchorElement()
+      ..href = url
+      ..download = '${widget.package!.packageName}_backup.zip';
+    anchor.click();
+    context.showSuccessSnackBar('Backup download started');
+  }
+
+  Future<void> _bringToForeground() async {
+    if (widget.package == null) return;
+    setState(() => _actionLoading['foreground'] = true);
+    await context.runWithFeedback(
+      action: () => widget.repository.bringToForeground(widget.package!.packageName),
+      successMessage: '${widget.package!.name} brought to foreground',
+      errorMessage: 'Failed to bring app to foreground',
+    );
+    if (mounted) setState(() => _actionLoading['foreground'] = false);
+  }
+
+  Widget _buildAppOpsSection() {
+    final ops = _appOps ?? [];
+    return _buildCollapsibleCard(
+      'App Ops',
+      Icons.app_settings_alt,
+      'app_ops',
+      ops.map((op) => PackageInfoRow(
+        label: op.contains(':') ? op.split(':').first.trim() : op,
+        value: op.contains(':') ? op.split(':').sublist(1).join(':').trim() : '',
+      )).toList(),
+      count: ops.length,
     );
   }
 
@@ -957,21 +811,21 @@ class _PackageDetailsPageState extends State<PackageDetailsPage> {
                   ),
                   child: Column(
                     children: [
-                      _buildInfoRow('Algorithm', sig['algorithm'] ?? 'Unknown'),
-                      _buildInfoRow('Subject', sig['subject'] ?? 'Unknown'),
-                      _buildInfoRow('Issuer', sig['issuer'] ?? 'Unknown'),
-                      _buildInfoRow(
-                        'Valid From',
-                        sig['notBefore'] ?? 'Unknown',
+                      PackageInfoRow(label: 'Algorithm', value: sig['algorithm'] ?? 'Unknown'),
+                      PackageInfoRow(label: 'Subject', value: sig['subject'] ?? 'Unknown'),
+                      PackageInfoRow(label: 'Issuer', value: sig['issuer'] ?? 'Unknown'),
+                      PackageInfoRow(
+                        label: 'Valid From',
+                        value: sig['notBefore'] ?? 'Unknown',
                       ),
-                      _buildInfoRow(
-                        'Valid Until',
-                        sig['notAfter'] ?? 'Unknown',
+                      PackageInfoRow(
+                        label: 'Valid Until',
+                        value: sig['notAfter'] ?? 'Unknown',
                       ),
                       const SizedBox(height: 8),
-                      _buildInfoRow('MD5', sig['md5'] ?? 'Unknown'),
-                      _buildInfoRow('SHA1', sig['sha1'] ?? 'Unknown'),
-                      _buildInfoRow('SHA256', sig['sha256'] ?? 'Unknown'),
+                      PackageInfoRow(label: 'MD5', value: sig['md5'] ?? 'Unknown'),
+                      PackageInfoRow(label: 'SHA1', value: sig['sha1'] ?? 'Unknown'),
+                      PackageInfoRow(label: 'SHA256', value: sig['sha256'] ?? 'Unknown'),
                     ],
                   ),
                 ),
@@ -989,6 +843,7 @@ class _PackageDetailsPageState extends State<PackageDetailsPage> {
 
   Widget _buildPermissionsCard() {
     final permissions = _permissions;
+    final allPerms = permissions != null ? List<String>.from(permissions['all'] ?? []) : <String>[];
 
     return _buildCollapsibleCard(
       'Permissions',
@@ -996,15 +851,14 @@ class _PackageDetailsPageState extends State<PackageDetailsPage> {
       'permissions',
       permissions == null
           ? [const Center(child: CircularProgressIndicator())]
-          : List<String>.from(permissions['all'] ?? []).map((perm) {
+          : allPerms.map((perm) {
               final isGranted = Set<String>.from(
                 permissions['granted'] ?? [],
               ).contains(perm);
               return _buildPermissionRow(perm, isGranted);
             }).toList(),
-      count: permissions != null
-          ? List<String>.from(permissions['all'] ?? []).length
-          : null,
+      count: permissions != null ? allPerms.length : null,
+      searchableContent: allPerms.join(' '),
     );
   }
 
@@ -1069,45 +923,37 @@ class _PackageDetailsPageState extends State<PackageDetailsPage> {
     final buttonText = isGranted ? 'Revoke' : 'Grant';
     final buttonIcon = isGranted ? Icons.block : Icons.check;
 
-    return MouseRegion(
-      cursor: SystemMouseCursors.click,
-      child: GestureDetector(
-        onTap: isLoading
-            ? null
-            : () => _togglePermission(permission, isGranted),
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-          decoration: BoxDecoration(
-            color: buttonColor.withAlpha(25),
-            borderRadius: BorderRadius.circular(4),
-            border: Border.all(color: buttonColor.withAlpha(50)),
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              if (isLoading)
-                SizedBox(
-                  width: 12,
-                  height: 12,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 2,
-                    valueColor: AlwaysStoppedAnimation<Color>(buttonColor),
-                  ),
-                )
-              else
-                Icon(buttonIcon, size: 12, color: buttonColor),
-              const SizedBox(width: 4),
-              Text(
-                buttonText,
-                style: TextStyle(
-                  fontSize: 11,
-                  fontWeight: FontWeight.w600,
-                  color: buttonColor,
-                ),
+    return TextButton.icon(
+      onPressed: isLoading
+          ? null
+          : () => _togglePermission(permission, isGranted),
+      icon: isLoading
+          ? SizedBox(
+              width: 12,
+              height: 12,
+              child: CircularProgressIndicator(
+                strokeWidth: 2,
+                valueColor: AlwaysStoppedAnimation<Color>(buttonColor),
               ),
-            ],
-          ),
+            )
+          : Icon(buttonIcon, size: 12, color: buttonColor),
+      label: Text(
+        buttonText,
+        style: TextStyle(
+          fontSize: 11,
+          fontWeight: FontWeight.w600,
+          color: buttonColor,
         ),
+      ),
+      style: TextButton.styleFrom(
+        backgroundColor: buttonColor.withAlpha(25),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(4),
+          side: BorderSide(color: buttonColor.withAlpha(50)),
+        ),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        minimumSize: Size.zero,
+        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
       ),
     );
   }
@@ -1158,39 +1004,6 @@ class _PackageDetailsPageState extends State<PackageDetailsPage> {
     }
   }
 
-  Widget _buildInfoRow(String label, String value) {
-    final cs = Theme.of(context).colorScheme;
-
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
-      child: InkWell(
-        onTap: () => _copy('$label: $value', label),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            SizedBox(
-              width: 120,
-              child: Text(
-                label,
-                style: TextStyle(
-                  fontWeight: FontWeight.w500,
-                  fontSize: 13,
-                  color: cs.onSurfaceVariant,
-                ),
-              ),
-            ),
-            Expanded(
-              child: Text(
-                value,
-                style: const TextStyle(fontFamily: 'monospace', fontSize: 13),
-              ),
-            ),
-            Icon(Icons.copy, size: 14, color: cs.onSurfaceVariant),
-          ],
-        ),
-      ),
-    );
-  }
 
   String _formatTimestamp(dynamic timestamp) {
     if (timestamp == null) return 'Unknown';
@@ -1202,24 +1015,13 @@ class _PackageDetailsPageState extends State<PackageDetailsPage> {
     }
   }
 
-  String _formatPath(String? path) {
-    if (path == null || path.isEmpty) return 'Unknown';
-    // Shorten long paths for better display
-    if (path.length > 40) {
-      final parts = path.split('/');
-      if (parts.length > 3) {
-        return '.../${parts[parts.length - 2]}/${parts.last}';
-      }
-    }
-    return path;
-  }
-
   void _copy(String text, String label) {
     Clipboard.setData(ClipboardData(text: text));
     context.showInfoSnackBar('$label copied to clipboard');
   }
 
   Future<void> _clearCache() async {
+    setState(() => _actionLoading['clearCache'] = true);
     try {
       await widget.repository.clearPackageCache(widget.package!.packageName);
       if (mounted) {
@@ -1229,6 +1031,8 @@ class _PackageDetailsPageState extends State<PackageDetailsPage> {
       if (mounted) {
         context.showErrorSnackBar(e.toString());
       }
+    } finally {
+      if (mounted) setState(() => _actionLoading['clearCache'] = false);
     }
   }
 
@@ -1254,6 +1058,7 @@ class _PackageDetailsPageState extends State<PackageDetailsPage> {
     );
 
     if (confirmed == true && mounted) {
+      setState(() => _actionLoading['clearData'] = true);
       try {
         await widget.repository.clearPackageData(widget.package!.packageName);
         if (mounted) {
@@ -1263,6 +1068,8 @@ class _PackageDetailsPageState extends State<PackageDetailsPage> {
         if (mounted) {
           context.showErrorSnackBar(e.toString());
         }
+      } finally {
+        if (mounted) setState(() => _actionLoading['clearData'] = false);
       }
     }
   }

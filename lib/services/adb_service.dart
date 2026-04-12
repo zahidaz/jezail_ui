@@ -10,6 +10,10 @@ class AdbService {
   
   Future<dynamic> getStatus() => _api.get('/adb/status');
   
-  Future<dynamic> installKey(String publicKey) => 
-      _api.post('/adb/key?publicKey=$publicKey');
+  Future<dynamic> installKey(String publicKey) =>
+      _api.post('/adb/key?publicKey=${Uri.encodeComponent(publicKey)}');
+
+  Future<dynamic> getPort() => _api.get('/adb/port');
+  Future<dynamic> setPort(int port) =>
+      _api.post('/adb/port', body: {'port': port});
 }

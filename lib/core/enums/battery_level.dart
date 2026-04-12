@@ -3,20 +3,13 @@ import 'package:flutter/material.dart';
 enum BatteryLevel { critical, low, medium, high, full }
 
 extension BatteryLevelExtension on BatteryLevel {
-  String get displayName {
-    switch (this) {
-      case BatteryLevel.critical:
-        return 'Critical';
-      case BatteryLevel.low:
-        return 'Low';
-      case BatteryLevel.medium:
-        return 'Medium';
-      case BatteryLevel.high:
-        return 'High';
-      case BatteryLevel.full:
-        return 'Full';
-    }
-  }
+  String get displayName => switch (this) {
+    BatteryLevel.critical => 'Critical',
+    BatteryLevel.low => 'Low',
+    BatteryLevel.medium => 'Medium',
+    BatteryLevel.high => 'High',
+    BatteryLevel.full => 'Full',
+  };
 
   IconData get icon => switch (this) {
     BatteryLevel.critical => Icons.battery_1_bar,

@@ -1,8 +1,5 @@
 import 'dart:typed_data';
-import 'dart:js_interop';
 import 'package:jezail_ui/services/api_service.dart';
-import 'package:jezail_ui/core/log.dart';
-
 import 'package:web/web.dart' as web;
 
 class DeviceService {
@@ -26,6 +23,8 @@ class DeviceService {
   Future<void> unmuteVolume() => _api.post('/device/keys/volume-unmute');
   Future<void> keycode(int code) =>
       _api.post('/device/keys/keycode/$code');
+  Future<void> typeText(String text) =>
+      _api.post('/device/keys/text', body: text);
 
   Future<dynamic> getSystemProperties() =>
       _api.get('/device/system/properties');
@@ -74,6 +73,30 @@ class DeviceService {
   }
   Future<void> clearLogs() => _api.delete('/device/logs');
 
+  Future<dynamic> getEnvironmentVariables() => _api.get('/device/env');
+  Future<dynamic> getEnvironmentVariable(String name) =>
+      _api.get('/device/env/${Uri.encodeComponent(name)}');
+
+  Future<dynamic> getDnsConfig() => _api.get('/device/dns');
+  Future<dynamic> setDns(Map<String, dynamic> config) =>
+      _api.post('/device/dns', body: config);
+  Future<dynamic> clearDns() => _api.delete('/device/dns');
+  Future<dynamic> setPrivateDns(String hostname) =>
+      _api.post('/device/dns/private', body: {'hostname': hostname});
+  Future<dynamic> clearPrivateDns() => _api.delete('/device/dns/private');
+
+  Future<dynamic> getProxyConfig() => _api.get('/device/proxy');
+  Future<dynamic> setProxy(Map<String, dynamic> config) =>
+      _api.post('/device/proxy', body: config);
+  Future<dynamic> clearProxy() => _api.delete('/device/proxy');
+
+  Future<dynamic> getAppOps(String packageName) =>
+      _api.get('/device/appops/${Uri.encodeComponent(packageName)}');
+  Future<dynamic> setAppOp(String packageName, String op, String mode) =>
+      _api.post('/device/appops/${Uri.encodeComponent(packageName)}/${Uri.encodeComponent(op)}/${Uri.encodeComponent(mode)}');
+  Future<dynamic> resetAppOps(String packageName) =>
+      _api.delete('/device/appops/${Uri.encodeComponent(packageName)}');
+
   Future<dynamic> getBattery() => _api.get('/device/battery');
   Future<dynamic> getCpu() => _api.get('/device/cpu');
   Future<dynamic> getRam() => _api.get('/device/ram');
@@ -84,7 +107,12 @@ class DeviceService {
 
   Future<String?> getClipboard() async {
     final res = await _api.get('/device/clipboard');
-    return res['data']?['content'];
+    final data = res['data'];
+    if (data is String) return data;
+    if (data is Map) {
+      return data['content']?.toString() ?? data['text']?.toString();
+    }
+    return null;
   }
   Future<void> setClipboard(String text) =>
       _api.post('/device/clipboard', body: text);
@@ -92,26 +120,13 @@ class DeviceService {
 
   Future<Uint8List> getScreenshot() => _api.getBinary('/device/screenshot');
 
-  Future<void> downloadScreenshot() async {
-    try {
-      Log.info('Taking screenshot and downloading');
-      final screenshotBytes = await getScreenshot();
-      final blob = web.Blob([screenshotBytes.toJS].toJS, web.BlobPropertyBag(type: 'image/png'));
-      final url = web.URL.createObjectURL(blob);
-      
-      final timestamp = DateTime.now().millisecondsSinceEpoch;
-      final filename = 'screenshot_$timestamp.png';
-      
-      final anchor = web.HTMLAnchorElement()
-        ..href = url
-        ..download = filename;
-      anchor.click();
-      
-      web.URL.revokeObjectURL(url);
-      Log.info('Screenshot downloaded: $filename');
-    } catch (e) {
-      Log.error('Failed to download screenshot', e);
-      rethrow;
-    }
+  String get screenshotUrl => _api.buildUrl('/device/screenshot');
+
+  void downloadScreenshot() {
+    final timestamp = DateTime.now().millisecondsSinceEpoch;
+    final anchor = web.HTMLAnchorElement()
+      ..href = screenshotUrl
+      ..download = 'screenshot_$timestamp.png';
+    anchor.click();
   }
 }

@@ -16,4 +16,7 @@ class FridaService {
   
   Future<dynamic> update() => _api.get('/frida/update');
 
+  Future<dynamic> getConfig() => _api.get('/frida/config');
+  Future<dynamic> updateConfig(Map<String, dynamic> config) =>
+      _api.post('/frida/config', body: config);
 }

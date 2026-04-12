@@ -1,33 +1,56 @@
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:jezail_ui/app_config.dart';
+import 'package:jezail_ui/services/api_service.dart';
+import 'package:jezail_ui/core/extensions/snackbar_extensions.dart';
+import 'package:jezail_ui/main.dart';
 
-class SettingsTab extends StatelessWidget {
-  const SettingsTab({super.key});
+class SettingsTab extends StatefulWidget {
+  const SettingsTab({super.key, this.apiService});
+  final ApiService? apiService;
 
-  static const _apiItems = [
-    _ApiItem(
-      icon: Icons.dashboard,
-      title: 'Swagger UI',
-      subtitle: 'Interactive API documentation',
-      urlPath: '/api/swagger',
-    ),
-    _ApiItem(
-      icon: Icons.data_object,
-      title: 'OpenAPI JSON',
-      subtitle: 'Raw OpenAPI specification',
-      urlPath: '/api/json',
-    ),
+  @override
+  State<SettingsTab> createState() => _SettingsTabState();
+}
+
+class _SettingsTabState extends State<SettingsTab> {
+  String? _apiStatus;
+
+  @override
+  void initState() {
+    super.initState();
+    _checkApiStatus();
+  }
+
+  Future<void> _checkApiStatus() async {
+    if (widget.apiService == null) return;
+    try {
+      final result = await widget.apiService!.get('/status');
+      if (mounted) setState(() => _apiStatus = result?['data']?['status']?.toString() ?? 'ok');
+    } catch (_) {
+      if (mounted) setState(() => _apiStatus = 'error');
+    }
+  }
+
+  static const List<_LinkItem> _apiItems = [
+    _LinkItem(Icons.dashboard, 'Swagger UI', '/api/swagger'),
+    _LinkItem(Icons.data_object, 'OpenAPI JSON', '/api/json'),
   ];
 
   Future<void> _launchUrl(String url) async {
     final uri = Uri.parse(url);
     if (await canLaunchUrl(uri)) {
       await launchUrl(uri, mode: LaunchMode.externalApplication);
+    } else if (mounted) {
+      context.showErrorSnackBar('Could not open URL');
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    final isOk = _apiStatus == 'ok';
+
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16.0),
       child: Center(
@@ -35,7 +58,40 @@ class SettingsTab extends StatelessWidget {
           constraints: const BoxConstraints(maxWidth: 600),
           child: Column(
             children: [
-              _ApiDocumentationCard(
+              Card(
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Row(
+                    children: [
+                      Icon(Icons.circle, size: 12, color: _apiStatus == null ? Colors.grey : isOk ? Colors.green : Colors.red),
+                      const SizedBox(width: 12),
+                      Text('API Status', style: Theme.of(context).textTheme.titleSmall),
+                      const Spacer(),
+                      Text(
+                        _apiStatus ?? 'Checking...',
+                        style: TextStyle(
+                          color: _apiStatus == null ? cs.onSurfaceVariant : isOk ? Colors.green : Colors.red,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      IconButton(
+                        onPressed: _checkApiStatus,
+                        icon: Icon(Icons.refresh, size: 18, color: cs.primary),
+                        tooltip: 'Refresh status',
+                        constraints: const BoxConstraints.tightFor(width: 32, height: 32),
+                        padding: EdgeInsets.zero,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+              _ThemeCard(),
+              const SizedBox(height: 16),
+              _LinkCard(
+                icon: Icons.api,
+                title: 'API Documentation',
                 items: _apiItems,
                 onItemTap: _launchUrl,
               ),
@@ -47,13 +103,17 @@ class SettingsTab extends StatelessWidget {
   }
 }
 
-class _ApiDocumentationCard extends StatelessWidget {
-  const _ApiDocumentationCard({
+class _LinkCard extends StatelessWidget {
+  const _LinkCard({
+    required this.icon,
+    required this.title,
     required this.items,
     required this.onItemTap,
   });
 
-  final List<_ApiItem> items;
+  final IconData icon;
+  final String title;
+  final List<_LinkItem> items;
   final Future<void> Function(String) onItemTap;
 
   @override
@@ -66,12 +126,9 @@ class _ApiDocumentationCard extends StatelessWidget {
           children: [
             ListTile(
               contentPadding: EdgeInsets.zero,
-              leading: Icon(
-                Icons.api,
-                color: Theme.of(context).colorScheme.primary,
-              ),
+              leading: Icon(icon, color: Theme.of(context).colorScheme.primary),
               title: Text(
-                'API Documentation',
+                title,
                 style: Theme.of(context).textTheme.titleMedium?.copyWith(
                   fontWeight: FontWeight.w600,
                 ),
@@ -94,7 +151,7 @@ class _ApiDocumentationCard extends StatelessWidget {
                     ),
                   ],
                 ),
-                onPressed: () => onItemTap('${Uri.base.origin}${item.urlPath}'),
+                onPressed: () => onItemTap('${AppConfig.baseUrl}${item.urlPath}'),
                 backgroundColor: Theme.of(context).colorScheme.secondaryContainer,
                 labelStyle: TextStyle(
                   color: Theme.of(context).colorScheme.onSecondaryContainer,
@@ -109,16 +166,52 @@ class _ApiDocumentationCard extends StatelessWidget {
   }
 }
 
-class _ApiItem {
-  const _ApiItem({
-    required this.icon,
-    required this.title,
-    required this.subtitle,
-    required this.urlPath,
-  });
+class _LinkItem {
+  const _LinkItem(this.icon, this.title, this.urlPath);
 
   final IconData icon;
   final String title;
-  final String subtitle;
   final String urlPath;
+}
+
+class _ThemeCard extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    final themeNotifier = ThemeModeNotifier.of(context);
+
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            ListTile(
+              contentPadding: EdgeInsets.zero,
+              leading: Icon(Icons.palette, color: Theme.of(context).colorScheme.primary),
+              title: Text(
+                'Theme',
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+            ValueListenableBuilder<ThemeMode>(
+              valueListenable: themeNotifier,
+              builder: (context, mode, _) => SegmentedButton<ThemeMode>(
+                segments: const [
+                  ButtonSegment(value: ThemeMode.system, icon: Icon(Icons.settings_brightness, size: 18), label: Text('System')),
+                  ButtonSegment(value: ThemeMode.light, icon: Icon(Icons.light_mode, size: 18), label: Text('Light')),
+                  ButtonSegment(value: ThemeMode.dark, icon: Icon(Icons.dark_mode, size: 18), label: Text('Dark')),
+                ],
+                selected: {mode},
+                onSelectionChanged: (selection) {
+                  themeNotifier.value = selection.first;
+                },
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 }

@@ -20,7 +20,7 @@ class PackageService {
   Future<dynamic> launchPackage(String package, {String? activity}) {
     String endpoint = '/package/$package/launch';
     if (activity != null) {
-      endpoint += '?activity=$activity';
+      endpoint += '?activity=${Uri.encodeComponent(activity)}';
     }
     return _api.get(endpoint);
   }
@@ -68,4 +68,10 @@ class PackageService {
   
   Future<dynamic> isPackageDebuggable(String package) => _api.get('/package/$package/debuggable');
 
+  String getApkDownloadUrl(String package) =>
+      _api.buildUrl('/package/$package/download');
+  String getBackupUrl(String package) =>
+      _api.buildUrl('/package/$package/backup');
+  Future<dynamic> bringToForeground(String package) =>
+      _api.get('/package/$package/foreground');
 }

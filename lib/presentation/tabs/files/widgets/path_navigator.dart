@@ -173,14 +173,16 @@ class _PathNavigatorState extends State<PathNavigator> {
   }
 
   Widget _buildSearchSection(ThemeData theme) {
-    return AnimatedContainer(
-      duration: const Duration(milliseconds: 300),
-      width: _isSearchExpanded ? 300 : 48,
+    if (!_isSearchExpanded) {
+      return _buildSearchButton();
+    }
+    return ConstrainedBox(
+      constraints: const BoxConstraints(maxWidth: 300),
       child: Row(
+        mainAxisSize: MainAxisSize.min,
         children: [
-          if (_isSearchExpanded) _buildSearchField(),
-          if (!_isSearchExpanded) _buildSearchButton(),
-          if (_isSearchExpanded) _buildCloseSearchButton(),
+          Flexible(child: _buildSearchField()),
+          _buildCloseSearchButton(),
         ],
       ),
     );

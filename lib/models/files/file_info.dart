@@ -139,13 +139,8 @@ class FileInfo {
     return '${(size / (1024 * 1024 * 1024)).toStringAsFixed(1)}GB';
   }
 
-  FilePermissions? _cachedPermissions;
-  FilePermissions get parsedPermissions =>
-      _cachedPermissions ??= FilePermissions.fromString(permissions);
-
-  String? _cachedSizeFormatted;
-  String get sizeFormatted =>
-      _cachedSizeFormatted ??= _computeSizeFormatted();
+  late final FilePermissions parsedPermissions = FilePermissions.fromString(permissions);
+  late final String sizeFormatted = _computeSizeFormatted();
 
   bool get isLikelyTextFile {
     if (isDirectory) return false;
@@ -156,6 +151,7 @@ class FileInfo {
 
   Map<String, dynamic> toJson() => {
     'name': name,
+    'path': path,
     'displayName': displayName,
     'symlinkTarget': symlinkTarget,
     'permissions': permissions,

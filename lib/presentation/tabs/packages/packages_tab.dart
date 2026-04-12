@@ -1,10 +1,10 @@
-import 'package:jezail_ui/models/packages/package_actions.dart';
 import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:go_router/go_router.dart';
 
 import 'package:jezail_ui/models/packages/package_info.dart';
 import 'package:jezail_ui/repositories/package_repository.dart';
+import 'package:jezail_ui/services/device_service.dart';
 import 'package:jezail_ui/core/enums/package_enums.dart';
 import 'package:jezail_ui/core/extensions/snackbar_extensions.dart';
 import 'package:jezail_ui/presentation/utils/dialog_utils.dart';
@@ -24,26 +24,27 @@ extension PackageTabStateExtension on PackageTabState {
   PackageTabState copyWith({
     List<PackageInfo>? packages,
     bool? isLoading,
-    String? error,
+    (String?,)? error,
     String? searchQuery,
     AppTypeFilter? filter,
-    PackageInfo? selectedPackage,
+    (PackageInfo?,)? selectedPackage,
   }) {
     return (
       packages: packages ?? this.packages,
       isLoading: isLoading ?? this.isLoading,
-      error: error ?? this.error,
+      error: error != null ? error.$1 : this.error,
       searchQuery: searchQuery ?? this.searchQuery,
       filter: filter ?? this.filter,
-      selectedPackage: selectedPackage ?? this.selectedPackage,
+      selectedPackage: selectedPackage != null ? selectedPackage.$1 : this.selectedPackage,
     );
   }
 }
 
 class PackagesTab extends StatefulWidget {
-  const PackagesTab({super.key, required this.packageRepository});
+  const PackagesTab({super.key, required this.packageRepository, this.deviceService});
 
   final PackageRepository packageRepository;
+  final DeviceService? deviceService;
 
   @override
   State<PackagesTab> createState() => PackagesTabState();
@@ -51,7 +52,7 @@ class PackagesTab extends StatefulWidget {
 
 class PackagesTabState extends State<PackagesTab> {
   late final PageController _pageController = PageController();
-  
+
   PackageTabState _state = (
     packages: <PackageInfo>[],
     isLoading: false,
@@ -62,6 +63,7 @@ class PackagesTabState extends State<PackagesTab> {
   );
 
   bool _hasLoaded = false;
+  String? _pendingPackageNavigation;
 
   @override
   void initState() {
@@ -81,8 +83,8 @@ class PackagesTabState extends State<PackagesTab> {
 
   Future<void> _loadPackages() async {
     if (_hasLoaded) return;
-    
-    _updateState((s) => s.copyWith(isLoading: true, error: null));
+
+    _updateState((s) => s.copyWith(isLoading: true, error: (null,)));
 
     try {
       final packages = await widget.packageRepository.getAllPackages();
@@ -90,17 +92,22 @@ class PackagesTabState extends State<PackagesTab> {
       _updateState((s) => s.copyWith(
         packages: packages,
         isLoading: false,
-        error: null,
+        error: (null,),
       ));
+      _processPendingNavigation();
     } catch (e) {
-      _updateState((s) => (
-        packages: s.packages,
+      _updateState((s) => s.copyWith(
         isLoading: false,
-        error: 'Failed to load packages: $e',
-        searchQuery: s.searchQuery,
-        filter: s.filter,
-        selectedPackage: s.selectedPackage,
+        error: ('Failed to load packages: $e',),
       ));
+    }
+  }
+
+  void _processPendingNavigation() {
+    final pending = _pendingPackageNavigation;
+    if (pending != null) {
+      _pendingPackageNavigation = null;
+      navigateToPackageDetails(pending);
     }
   }
 
@@ -138,59 +145,51 @@ class PackagesTabState extends State<PackagesTab> {
   Future<void> _updatePackageRunningStatus(String packageName) async {
     try {
       final isRunning = await widget.packageRepository.isPackageRunning(packageName);
-      final updatedPackages = _state.packages.map((pkg) => 
-        pkg.packageName == packageName 
+      final updatedPackages = _state.packages.map((pkg) =>
+        pkg.packageName == packageName
           ? pkg.copyWith(isRunning: isRunning)
           : pkg
       ).toList();
-      
+
       _updateState((s) => s.copyWith(packages: updatedPackages));
-    } catch (e) {
+    } catch (_) {
       await _refreshPackages();
     }
   }
 
   Future<void> _showPackageDetails(PackageInfo pkg) async {
-    context.go('/packages/details?package=${pkg.packageName}');
-    
-    _updateState((s) => (
-      packages: s.packages,
-      isLoading: s.isLoading,
-      error: s.error,
-      searchQuery: s.searchQuery,
-      filter: s.filter,
-      selectedPackage: pkg,
-    ));
+    _updateState((s) => s.copyWith(selectedPackage: (pkg,)));
 
     _pageController.animateToPage(1, duration: Duration(milliseconds: 300), curve: Curves.easeOut);
   }
 
   Future<void> _installApk() async {
-    await context.runWithFeedback(
-      action: () async {
-        final result = await FilePicker.platform.pickFiles(
-          type: FileType.custom,
-          allowedExtensions: ['apk'],
-          withData: true,
-        );
+    final result = await FilePicker.platform.pickFiles(
+      type: FileType.custom,
+      allowedExtensions: ['apk'],
+      withData: true,
+    );
 
-        if (result?.files.single.bytes case final bytes? when mounted) {
-          final confirmed = await DialogUtils.showConfirmationDialog(
-            context,
-            title: 'Install APK',
-            message: 'Install ${result!.files.single.name}?',
-            confirmText: 'Install',
-          );
+    if (result?.files.single.bytes case final bytes? when mounted) {
+      final confirmed = await DialogUtils.showConfirmationDialog(
+        context,
+        title: 'Install APK',
+        message: 'Install ${result!.files.single.name}?',
+        confirmText: 'Install',
+      );
 
-          if (confirmed) {
+      if (confirmed && mounted) {
+        await context.runWithFeedback(
+          action: () async {
             await widget.packageRepository.installApk(bytes);
             await _refreshPackages();
-          }
-        }
-      },
-      successMessage: 'APK installed successfully',
-      errorMessage: 'Failed to install APK',
-    );
+          },
+          loadingMessage: 'Installing APK...',
+          successMessage: 'APK installed successfully',
+          errorMessage: 'Failed to install APK',
+        );
+      }
+    }
   }
 
   Future<void> _uninstallPackage(PackageInfo pkg) async {
@@ -206,8 +205,10 @@ class PackagesTabState extends State<PackagesTab> {
       await context.runWithFeedback(
         action: () async {
           await widget.packageRepository.uninstallPackage(pkg.packageName);
+          _goBackToList();
           await _refreshPackages();
         },
+        loadingMessage: 'Uninstalling ${pkg.name}...',
         successMessage: 'Uninstalled ${pkg.name}',
         errorMessage: 'Failed to uninstall ${pkg.name}',
       );
@@ -220,6 +221,10 @@ class PackagesTabState extends State<PackagesTab> {
   }
 
   Future<void> navigateToPackageDetails(String packageName) async {
+    if (!_hasLoaded) {
+      _pendingPackageNavigation = packageName;
+      return;
+    }
     final pkg = _state.packages.firstWhere(
       (p) => p.packageName == packageName,
       orElse: () => PackageInfo(
@@ -254,7 +259,7 @@ class PackagesTabState extends State<PackagesTab> {
     return matchesSearch && matchesFilter;
   }).toList();
 
-  PackageState get _listPageState => (
+  PackageListState get _listPageState => (
     packages: _state.packages,
     isLoading: _state.isLoading,
     error: _state.error,
@@ -266,26 +271,13 @@ class PackagesTabState extends State<PackagesTab> {
   Widget build(BuildContext context) {
     return PageView(
       controller: _pageController,
+      physics: const NeverScrollableScrollPhysics(),
       children: [
         PackageListPage(
           state: _listPageState,
           filteredPackages: _filteredPackages,
-          onSearchChanged: (query) => _updateState((s) => (
-            packages: s.packages,
-            isLoading: s.isLoading,
-            error: s.error,
-            searchQuery: query,
-            filter: s.filter,
-            selectedPackage: s.selectedPackage,
-          )),
-          onFilterChanged: (filter) => _updateState((s) => (
-            packages: s.packages,
-            isLoading: s.isLoading,
-            error: s.error,
-            searchQuery: s.searchQuery,
-            filter: filter,
-            selectedPackage: s.selectedPackage,
-          )),
+          onSearchChanged: (query) => _updateState((s) => s.copyWith(searchQuery: query)),
+          onFilterChanged: (filter) => _updateState((s) => s.copyWith(filter: filter)),
           onRefresh: _refreshPackages,
           onInstallApk: _installApk,
           onPackageAction: _handlePackageAction,
@@ -293,6 +285,7 @@ class PackagesTabState extends State<PackagesTab> {
         PackageDetailsPage(
           package: _state.selectedPackage,
           repository: widget.packageRepository,
+          deviceService: widget.deviceService,
           onBack: _goBackToList,
           onPackageAction: _handlePackageAction,
         ),

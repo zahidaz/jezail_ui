@@ -118,12 +118,8 @@ class FileRepository {
     }
   }
 
-  Future<({Uint8List data, String filename})> download(List<String> paths) async {
-    try {
-      return await _fileService.download(paths);
-    } catch (e) {
-      throw FileOperationException('Failed to download files: $e');
-    }
+  String getDownloadUrl(List<String> paths) {
+    return _fileService.getDownloadUrl(paths);
   }
 
   Future<bool> fileExists(String path) async {

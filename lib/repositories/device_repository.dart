@@ -1,69 +1,22 @@
 import 'package:jezail_ui/services/device_service.dart';
-import 'package:jezail_ui/models/device/process_info.dart';
-import 'package:jezail_ui/core/enums/device_enums.dart';
 
 class DeviceRepository {
   const DeviceRepository(this._deviceService);
 
   final DeviceService _deviceService;
 
-  Future<Map<String, dynamic>> getDeviceInfo() async => await _deviceService.getDeviceInfo();
-  Future<Map<String, dynamic>> getBuildInfo() async => await _deviceService.getBuildInfo();
-  Future<Map<String, dynamic>> getBatteryInfo() async => await _deviceService.getBattery();
-  Future<Map<String, dynamic>> getCpuInfo() async => await _deviceService.getCpu();
-  Future<Map<String, dynamic>> getRamInfo() async => await _deviceService.getRam();
-  Future<Map<String, dynamic>> getStorageInfo() async => await _deviceService.getStorage();
-  Future<Map<String, dynamic>> getStorageDetails() async => await _deviceService.getStorageDetails();
-  Future<Map<String, dynamic>> getNetworkInfo() async => await _deviceService.getNetwork();
-  Future<Map<String, dynamic>> getSelinuxStatus() async => await _deviceService.getSelinuxStatus();
+  Future<dynamic> getDeviceInfo() => _deviceService.getDeviceInfo();
+  Future<dynamic> getBuildInfo() => _deviceService.getBuildInfo();
+  Future<dynamic> getBatteryInfo() => _deviceService.getBattery();
+  Future<dynamic> getCpuInfo() => _deviceService.getCpu();
+  Future<dynamic> getRamInfo() => _deviceService.getRam();
+  Future<dynamic> getStorageInfo() => _deviceService.getStorage();
+  Future<dynamic> getStorageDetails() => _deviceService.getStorageDetails();
+  Future<dynamic> getNetworkInfo() => _deviceService.getNetwork();
+  Future<dynamic> getSelinuxStatus() => _deviceService.getSelinuxStatus();
   Future<void> toggleSelinux(bool enable) => _deviceService.toggleSelinux(enable);
-  Future<Map<String, dynamic>> getSystemProperties() async => await _deviceService.getSystemProperties();
+  Future<dynamic> getSystemProperties() => _deviceService.getSystemProperties();
+  Future<dynamic> getEnvironmentVariables() => _deviceService.getEnvironmentVariables();
 
-  Future<String> getSystemProperty(String key) async {
-    final result = await _deviceService.getSystemProperty(key);
-    return result['data']['value'] as String;
-  }
-
-  Future<void> setSystemProperty(String key, String value) => 
-      _deviceService.setSystemProperty(key, value);
-
-  Future<List<ProcessInfo>> getProcesses() async {
-    final result = await _deviceService.listProcesses();
-    final processes = List<Map<String, dynamic>>.from(result['data'] ?? []);
-    return processes.map(ProcessInfo.fromJson).toList();
-  }
-
-  Future<Map<String, dynamic>> getProcessInfo(int pid) async => await _deviceService.getProcess(pid);
-  Future<void> killProcess(int pid) => _deviceService.killProcessByPid(pid);
-  Future<void> killProcessByName(String name) => _deviceService.killProcessByName(name);
-
-  Future<List<String>> getLogs(LogType logType, {String? filter, int? lines}) async {
-    final result = await switch (logType) {
-      LogType.main => _deviceService.getAllLogs(lines: lines, filter: filter),
-      LogType.system => _deviceService.getSystemLogs(lines: lines, filter: filter),
-      LogType.kernel => _deviceService.getKernelLogs(lines: lines, filter: filter),
-      LogType.radio => _deviceService.getRadioLogs(lines: lines, filter: filter),
-      LogType.crash => _deviceService.getCrashLogs(lines: lines, filter: filter),
-      LogType.events => _deviceService.getEventLogs(lines: lines, filter: filter),
-    };
-    return List<String>.from(result['data'] ?? []);
-  }
-
-  Future<void> clearLogs() => _deviceService.clearLogs();
-  Future<String?> getClipboard() => _deviceService.getClipboard();
-  Future<void> setClipboard(String text) => _deviceService.setClipboard(text);
-  Future<void> clearClipboard() => _deviceService.clearClipboard();
-
-  Future<void> pressHome() => _deviceService.pressHome();
-  Future<void> pressBack() => _deviceService.pressBack();
-  Future<void> pressMenu() => _deviceService.pressMenu();
-  Future<void> pressRecentApps() => _deviceService.pressRecentApps();
-  Future<void> pressPower() => _deviceService.pressPower();
-  Future<void> pressVolumeUp() => _deviceService.pressVolumeUp();
-  Future<void> pressVolumeDown() => _deviceService.pressVolumeDown();
-  Future<void> muteVolume() => _deviceService.muteVolume();
-  Future<void> unmuteVolume() => _deviceService.unmuteVolume();
-  Future<void> keycode(int code) => _deviceService.keycode(code);
-
-  Future<void> downloadScreenshot() => _deviceService.downloadScreenshot();
+  void downloadScreenshot() => _deviceService.downloadScreenshot();
 }
