@@ -43,21 +43,13 @@ final class FileExplorerViewState {
   }
 
   FileExplorerViewState toggleSelection(FileInfo file) {
-    if (selectedFiles.contains(file)) {
-      if (selectedFiles.length == 1) {
-        return copyWith(selectedFiles: <FileInfo>{});
-      } else {
-        final newSelection = Set<FileInfo>.from(selectedFiles)..remove(file);
-        return copyWith(selectedFiles: newSelection);
-      }
+    final newSelection = Set<FileInfo>.from(selectedFiles);
+    if (newSelection.contains(file)) {
+      newSelection.remove(file);
     } else {
-      if (selectedFiles.isEmpty) {
-        return copyWith(selectedFiles: {file});
-      } else {
-        final newSelection = Set<FileInfo>.from(selectedFiles)..add(file);
-        return copyWith(selectedFiles: newSelection);
-      }
+      newSelection.add(file);
     }
+    return copyWith(selectedFiles: newSelection);
   }
 
   FileExplorerViewState clearSelection() {
@@ -68,13 +60,12 @@ final class FileExplorerViewState {
     return copyWith(selectedFiles: files.toSet());
   }
 
-
   FileExplorerViewState setSortField(FileSortField field) {
     final ascending = sortField == field ? !sortAscending : true;
     return copyWith(
       sortField: field,
       sortAscending: ascending,
-      filesResult: Success(_sortFiles(files, field, ascending)),
+      filesResult: Success(sortFiles(files, field, ascending)),
     );
   }
 
@@ -94,7 +85,7 @@ final class FileExplorerViewState {
         : '$currentPath/$childName';
   }
 
-  static List<FileInfo> _sortFiles(List<FileInfo> files, FileSortField field, bool ascending) {
+  static List<FileInfo> sortFiles(List<FileInfo> files, FileSortField field, bool ascending) {
     final sorted = List<FileInfo>.from(files);
     
     sorted.sort((a, b) {

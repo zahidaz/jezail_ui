@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'dart:async';
 
 import 'package:jezail_ui/models/device/process_info.dart';
@@ -8,6 +7,7 @@ import 'package:jezail_ui/core/extensions/snackbar_extensions.dart';
 import 'package:jezail_ui/core/enums/process_enums.dart';
 import 'package:jezail_ui/presentation/utils/dialog_utils.dart';
 import 'package:jezail_ui/presentation/tabs/device/widgets/search.dart';
+import 'package:jezail_ui/presentation/widgets/collapsible_card.dart';
 
 class ProcessesTab extends StatefulWidget {
   const ProcessesTab({super.key, required this.repository});
@@ -117,7 +117,7 @@ class _ProcessesTabState extends State<ProcessesTab> with SingleTickerProviderSt
       title: 'Kill Process', message: 'Kill "${process.name}" (${process.pid})?',
       confirmText: 'Kill', confirmButtonColor: Colors.red);
     if (confirmed && mounted) {
-      HapticFeedback.mediumImpact();
+
       await context.runWithFeedback(
         action: () => widget.repository.killProcess(process.pid),
         successMessage: 'Killed ${process.name}', errorMessage: 'Kill failed');
@@ -234,107 +234,80 @@ class _ProcessesTabState extends State<ProcessesTab> with SingleTickerProviderSt
           itemBuilder: (_, i) {
             final p = filtered[i];
             final isExpanded = expandedProcesses.contains(p.pid);
-            return Container(
-              margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
-              decoration: BoxDecoration(
-                color: cs.surface,
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: cs.outline.withAlpha(25)),
-              ),
-              child: Column(
-                children: [
-                  InkWell(
-                    onTap: () => setState(() {
-                      if (isExpanded) {
-                        expandedProcesses.remove(p.pid);
-                      } else {
-                        expandedProcesses.add(p.pid);
-                      }
-                    }),
-                    child: Padding(
-                      padding: const EdgeInsets.all(12),
-                      child: Row(children: [
-                        Container(
-                          width: 32, height: 32,
-                          decoration: BoxDecoration(color: cs.primaryContainer, borderRadius: BorderRadius.circular(6)),
-                          child: Center(child: Text(p.pid.toString(), 
-                            style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: cs.onPrimaryContainer))),
-                        ),
-                        const SizedBox(width: 10),
-                        Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                          Text(p.name, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14), maxLines: 1, overflow: TextOverflow.ellipsis),
-                          const SizedBox(height: 2),
-                          Row(children: [
-                            Icon(Icons.person, size: 12, color: cs.onSurfaceVariant),
-                            const SizedBox(width: 3),
-                            Text(p.user ?? 'Unknown', style: TextStyle(fontSize: 11, color: cs.onSurfaceVariant)),
-                            const SizedBox(width: 8),
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
-                              decoration: BoxDecoration(color: _stateColor(p.state).withAlpha(25), borderRadius: BorderRadius.circular(3)),
-                              child: Text(p.state ?? '?', style: TextStyle(fontSize: 10, color: _stateColor(p.state), fontWeight: FontWeight.w500)),
-                            ),
-                            const Spacer(),
-                            Text(_formatMem(p.vsz), style: const TextStyle(fontSize: 11, fontFamily: 'monospace')),
-                          ]),
-                        ])),
-                        const SizedBox(width: 8),
-                        Icon(
-                          isExpanded ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down,
-                          color: cs.onSurfaceVariant,
-                          size: 20,
-                        ),
-                        const SizedBox(width: 4),
-                        GestureDetector(
-                          onTap: () => kill(p),
-                          child: Container(
-                            width: 28, height: 28,
-                            decoration: BoxDecoration(color: Colors.red.withAlpha(25), borderRadius: BorderRadius.circular(6)),
-                            child: const Icon(Icons.close, size: 16, color: Colors.red),
-                          ),
-                        ),
-                      ]),
-                    ),
-                  ),
-                  if (isExpanded) ...[
-                    Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-                      decoration: BoxDecoration(
-                        color: cs.surfaceContainerHighest.withAlpha(25),
-                        borderRadius: const BorderRadius.only(
-                          bottomLeft: Radius.circular(8),
-                          bottomRight: Radius.circular(8),
-                        ),
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Container(
-                            height: 1,
-                            color: cs.outline.withAlpha(25),
-                            margin: const EdgeInsets.only(bottom: 12),
-                          ),
-                          Text(
-                            'Process Details',
-                            style: TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w600,
-                              color: cs.primary,
-                            ),
-                          ),
-                          const SizedBox(height: 8),
-                          ..._buildProcessDetails(p, cs),
-                        ],
-                      ),
-                    ),
-                  ],
-                ],
-              ),
+            return _ProcessItem(
+              process: p,
+              isExpanded: isExpanded,
+              onToggle: () => setState(() {
+                if (isExpanded) {
+                  expandedProcesses.remove(p.pid);
+                } else {
+                  expandedProcesses.add(p.pid);
+                }
+              }),
+              onKill: () => kill(p),
+              stateColor: _stateColor(p.state),
+              formattedMem: _formatMem(p.vsz),
+              details: _buildProcessDetails(p, cs),
             );
           },
         ),
       ),
     ]);
+  }
+}
+
+class _ProcessItem extends StatelessWidget {
+  const _ProcessItem({
+    required this.process,
+    required this.isExpanded,
+    required this.onToggle,
+    required this.onKill,
+    required this.stateColor,
+    required this.formattedMem,
+    required this.details,
+  });
+
+  final ProcessInfo process;
+  final bool isExpanded;
+  final VoidCallback onToggle;
+  final VoidCallback onKill;
+  final Color stateColor;
+  final String formattedMem;
+  final List<Widget> details;
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+
+    return CollapsibleCard(
+      title: process.name,
+      icon: Icons.memory,
+      isExpanded: isExpanded,
+      onToggle: onToggle,
+      subtitle: '${process.user ?? "Unknown"} | ${process.state ?? "?"} | $formattedMem',
+      trailing: IconButton(
+        onPressed: onKill,
+        icon: const Icon(Icons.close, size: 16, color: Colors.red),
+        tooltip: 'Kill process',
+        constraints: const BoxConstraints.tightFor(width: 28, height: 28),
+        padding: EdgeInsets.zero,
+        style: IconButton.styleFrom(
+          backgroundColor: Colors.red.withAlpha(25),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
+        ),
+      ),
+      children: [
+        Text(
+          'Process Details',
+          style: TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.w600,
+            color: cs.primary,
+          ),
+        ),
+        const SizedBox(height: 8),
+        ...details,
+      ],
+    );
   }
 }

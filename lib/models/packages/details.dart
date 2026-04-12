@@ -138,14 +138,14 @@ class Activity {
   }
 }
 
-class Service {
+class AndroidComponent {
   final String name;
   final String processName;
   final bool exported;
   final bool enabled;
   final String? permission;
 
-  const Service({
+  const AndroidComponent({
     required this.name,
     required this.processName,
     required this.exported,
@@ -153,8 +153,8 @@ class Service {
     this.permission,
   });
 
-  factory Service.fromJson(Map<String, dynamic> json) {
-    return Service(
+  factory AndroidComponent.fromJson(Map<String, dynamic> json) {
+    return AndroidComponent(
       name: json['name'] ?? '',
       processName: json['processName'] ?? '',
       exported: json['exported'] ?? false,
@@ -164,31 +164,8 @@ class Service {
   }
 }
 
-class Receiver {
-  final String name;
-  final String processName;
-  final bool exported;
-  final bool enabled;
-  final String? permission;
-
-  const Receiver({
-    required this.name,
-    required this.processName,
-    required this.exported,
-    required this.enabled,
-    this.permission,
-  });
-
-  factory Receiver.fromJson(Map<String, dynamic> json) {
-    return Receiver(
-      name: json['name'] ?? '',
-      processName: json['processName'] ?? '',
-      exported: json['exported'] ?? false,
-      enabled: json['enabled'] ?? true,
-      permission: json['permission'],
-    );
-  }
-}
+typedef Service = AndroidComponent;
+typedef Receiver = AndroidComponent;
 
 class Provider {
   final String name;
@@ -328,7 +305,7 @@ class Signatures {
   bool get hasDebugCert => signatures.any((sig) => sig.isDebugCert);
 }
 
-class ProcessInfo {
+class PackageProcessInfo {
   final bool running;
   final int? pid;
   final bool cpuStatAvailable;
@@ -336,7 +313,7 @@ class ProcessInfo {
   final String? vmSize;
   final String? vmRss;
 
-  const ProcessInfo({
+  const PackageProcessInfo({
     required this.running,
     this.pid,
     required this.cpuStatAvailable,
@@ -345,9 +322,9 @@ class ProcessInfo {
     this.vmRss,
   });
 
-  factory ProcessInfo.fromJson(Map<String, dynamic> json) {
+  factory PackageProcessInfo.fromJson(Map<String, dynamic> json) {
     final data = json['data'] ?? json;
-    return ProcessInfo(
+    return PackageProcessInfo(
       running: data['running'] == 'true' || data['running'] == true,
       pid: data['pid'],
       cpuStatAvailable: data['cpu_stat_available'] ?? false,

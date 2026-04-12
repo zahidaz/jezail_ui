@@ -38,7 +38,7 @@ final class FileView extends StatefulWidget {
   final String? currentPath;
   final Future<void> Function()? onChanged;
   final Future<void> Function(FileInfo file)? onRename;
-  final Future<void> Function(FileInfo file)? onDownload;
+  final void Function(FileInfo file)? onDownload;
   final bool isMultiSelectMode;
   final VoidCallback? onMultiSelectModeChanged;
 
@@ -49,29 +49,8 @@ final class FileView extends StatefulWidget {
 final class _FileViewState extends State<FileView> {
   FileInfo? _contextMenuFile;
 
-  List<FileInfo> get files => widget.files;
-  Set<FileInfo> get selectedFiles => widget.selectedFiles;
-  void Function(FileInfo file, bool selected) get onFileSelect => widget.onFileSelect;
-  void Function(FileInfo file) get onFileActivate => widget.onFileActivate;
-  FileSortField? get sortField => widget.sortField;
-  bool? get sortAscending => widget.sortAscending;
-  void Function(FileSortField field)? get onSort => widget.onSort;
-  FileRepository? get repository => widget.repository;
-  String? get currentPath => widget.currentPath;
-  Future<void> Function()? get onChanged => widget.onChanged;
-  Future<void> Function(FileInfo file)? get onRename => widget.onRename;
-  Future<void> Function(FileInfo file)? get onDownload => widget.onDownload;
-  bool get isMultiSelectMode => widget.isMultiSelectMode;
-  VoidCallback? get onMultiSelectModeChanged => widget.onMultiSelectModeChanged;
-
-  late Map<String, bool> _selectionMap;
-
   @override
   Widget build(BuildContext context) {
-    _selectionMap = {
-      for (final file in selectedFiles) file.path: true,
-    };
-    
     return _buildListView(context);
   }
 
@@ -88,14 +67,14 @@ final class _FileViewState extends State<FileView> {
       ),
       child: Column(
         children: [
-          if (onSort != null) _buildTableHeader(theme),
+          if (widget.onSort != null) _buildTableHeader(theme),
           Expanded(
             child: ListView.builder(
-              itemCount: files.length,
+              itemCount: widget.files.length,
               itemExtent: 48.0,
               cacheExtent: 1000,
               itemBuilder: (context, index) {
-                final file = files[index];
+                final file = widget.files[index];
                 return RepaintBoundary(
                   key: ValueKey(file.path),
                   child: _buildFileListItem(context, file, index),
@@ -107,7 +86,6 @@ final class _FileViewState extends State<FileView> {
       ),
     );
   }
-
 
   Widget _buildTableHeader(ThemeData theme) {
     return Container(
@@ -122,9 +100,9 @@ final class _FileViewState extends State<FileView> {
       ),
       child: Row(
         children: [
-          if (isMultiSelectMode) 
-            _buildExitMultiSelectButton(theme) 
-          else 
+          if (widget.isMultiSelectMode)
+            _buildExitMultiSelectButton(theme)
+          else
             _buildMultiSelectToggle(theme),
           _buildHeaderCell('Name', FileSortField.name, flex: 3, icon: Icons.label),
           _buildHeaderCell('Size', FileSortField.size, icon: Icons.storage),
@@ -140,7 +118,7 @@ final class _FileViewState extends State<FileView> {
     return SizedBox(
       width: 40,
       child: IconButton(
-        onPressed: onMultiSelectModeChanged,
+        onPressed: widget.onMultiSelectModeChanged,
         icon: Icon(
           Icons.checklist,
           size: 16,
@@ -156,7 +134,7 @@ final class _FileViewState extends State<FileView> {
     return SizedBox(
       width: 40,
       child: IconButton(
-        onPressed: onMultiSelectModeChanged,
+        onPressed: widget.onMultiSelectModeChanged,
         icon: Icon(
           Icons.close,
           size: 16,
@@ -172,12 +150,12 @@ final class _FileViewState extends State<FileView> {
   }
 
   Widget _buildHeaderCell(String title, FileSortField field, {int flex = 1, IconData? icon}) {
-    final isActive = sortField == field;
+    final isActive = widget.sortField == field;
     
     return Expanded(
       flex: flex,
       child: InkWell(
-        onTap: () => onSort?.call(field),
+        onTap: () => widget.onSort?.call(field),
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
           child: Row(
@@ -194,10 +172,10 @@ final class _FileViewState extends State<FileView> {
                   fontSize: 12,
                 ),
               ),
-              if (isActive && sortAscending != null) ...[
+              if (isActive && widget.sortAscending != null) ...[
                 const SizedBox(width: 4),
                 Icon(
-                  sortAscending! ? Icons.arrow_upward : Icons.arrow_downward,
+                  widget.sortAscending! ? Icons.arrow_upward : Icons.arrow_downward,
                   size: 14,
                 ),
               ],
@@ -210,7 +188,7 @@ final class _FileViewState extends State<FileView> {
 
   Widget _buildFileListItem(BuildContext context, FileInfo file, int index) {
     final theme = Theme.of(context);
-    final isSelected = _selectionMap[file.path] == true;
+    final isSelected = widget.selectedFiles.contains(file);
     final isEvenRow = index % 2 == 0;
     final isContextMenuActive = _contextMenuFile == file;
     
@@ -239,14 +217,14 @@ final class _FileViewState extends State<FileView> {
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
           child: Row(
             children: [
-              if (isMultiSelectMode) ...[
+              if (widget.isMultiSelectMode) ...[
                 Checkbox(
                   value: isSelected,
-                  onChanged: (selected) => onFileSelect(file, selected ?? false),
+                  onChanged: (selected) => widget.onFileSelect(file, selected ?? false),
                   visualDensity: VisualDensity.compact,
                 ),
                 const SizedBox(width: 8),
-              ] else const SizedBox(width: 16),
+              ] else const SizedBox(width: 40),
               Icon(file.displayIcon, size: 20, color: _getFileIconColor(theme, file)),
               const SizedBox(width: 8),
               _buildFileNameCell(theme, file, flex: 3),
@@ -261,7 +239,6 @@ final class _FileViewState extends State<FileView> {
     );
   }
 
-
   Widget _buildFileInteractiveWrapper(
     BuildContext context,
     FileInfo file,
@@ -269,8 +246,8 @@ final class _FileViewState extends State<FileView> {
     required Widget child,
   }) {
     return GestureDetector(
-      onTap: () => onFileSelect(file, !isCurrentlySelected),
-      onDoubleTap: () => onFileActivate(file),
+      onTap: () => widget.onFileSelect(file, !isCurrentlySelected),
+      onDoubleTap: () => widget.onFileActivate(file),
       onSecondaryTapDown: (details) => _showContextMenu(context, details, file),
       behavior: HitTestBehavior.opaque,
       child: child,
@@ -331,7 +308,6 @@ final class _FileViewState extends State<FileView> {
     );
   }
 
-
   Widget _buildModifiedCell(ThemeData theme, FileInfo file, {int flex = 1}) {
     return Expanded(
       flex: flex,
@@ -361,16 +337,11 @@ final class _FileViewState extends State<FileView> {
     );
   }
 
-
-
-
   Color? _getFileIconColor(ThemeData theme, FileInfo file) {
     if (file.isDirectory) return theme.colorScheme.primary;
     if (file.isSymlink) return theme.colorScheme.secondary;
     return theme.colorScheme.onSurface;
   }
-
-
 
   String _formatOwnerGroup(FileInfo file) {
     if (file.owner.isEmpty && file.group.isEmpty) return '';
@@ -379,22 +350,30 @@ final class _FileViewState extends State<FileView> {
     return '${file.owner}:${file.group}';
   }
 
+  String _buildFilePath(FileInfo file) {
+    final cp = widget.currentPath!;
+    return cp.endsWith('/') ? '$cp${file.displayName}' : '$cp/${file.displayName}';
+  }
+
   void _editOwnership(BuildContext context, FileInfo file) {
     showDialog<void>(
       context: context,
       builder: (context) => FileOwnershipDialog(
         file: file,
         onSave: (owner, group) async {
-          if (repository == null || currentPath == null) return;
+          if (widget.repository == null || widget.currentPath == null) return;
           try {
-            final filePath = currentPath!.endsWith('/') ? '$currentPath${file.name}' : '$currentPath/${file.name}';
+            final filePath = _buildFilePath(file);
             if (owner != file.owner) {
-              await repository!.changeOwner(filePath, owner);
+              await widget.repository!.changeOwner(filePath, owner);
             }
             if (group != file.group) {
-              await repository!.changeGroup(filePath, group);
+              await widget.repository!.changeGroup(filePath, group);
             }
-            await onChanged?.call();
+            await widget.onChanged?.call();
+            if (context.mounted) {
+              context.showSuccessSnackBar('Ownership updated');
+            }
           } catch (e) {
             if (context.mounted) {
               context.showErrorSnackBar('Failed to update ownership: $e');
@@ -411,11 +390,14 @@ final class _FileViewState extends State<FileView> {
       builder: (context) => FilePermissionsDialog(
         file: file,
         onSave: (permissions) async {
-          if (repository == null || currentPath == null) return;
+          if (widget.repository == null || widget.currentPath == null) return;
           try {
-            final filePath = currentPath!.endsWith('/') ? '$currentPath${file.name}' : '$currentPath/${file.name}';
-            await repository!.changePermissions(filePath, permissions);
-            await onChanged?.call();
+            final filePath = _buildFilePath(file);
+            await widget.repository!.changePermissions(filePath, permissions);
+            await widget.onChanged?.call();
+            if (context.mounted) {
+              context.showSuccessSnackBar('Permissions updated');
+            }
           } catch (e) {
             if (context.mounted) {
               context.showErrorSnackBar('Failed to update permissions: $e');
@@ -428,19 +410,19 @@ final class _FileViewState extends State<FileView> {
 
 
   void _showContextMenu(BuildContext context, TapDownDetails details, FileInfo file) {
-    if (currentPath == null) return;
-    
+    if (widget.currentPath == null) return;
+
     setState(() {
       _contextMenuFile = file;
     });
-    
+
     FileContextMenu.show(
       context,
       details,
       file,
-      currentPath!,
-      onDownload: onDownload,
-      onRename: onRename,
+      widget.currentPath!,
+      onDownload: widget.onDownload,
+      onRename: widget.onRename,
     ).then((_) {
       if (mounted) {
         setState(() {

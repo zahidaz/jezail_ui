@@ -23,7 +23,6 @@ class AboutTab extends StatelessWidget {
     _DependencyData(
       'libsu',
       'https://github.com/topjohnwu/libsu',
-      'Root access functionality',
     ),
   ];
 
@@ -233,9 +232,8 @@ class _LinkData {
 }
 
 class _DependencyData {
-  const _DependencyData(this.name, this.url, this.description);
+  const _DependencyData(this.name, this.url);
 
   final String name;
   final String url;
-  final String description;
 }

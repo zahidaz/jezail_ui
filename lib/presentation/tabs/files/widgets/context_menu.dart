@@ -11,7 +11,7 @@ final class FileContextMenu {
     TapDownDetails details,
     FileInfo file,
     String currentPath, {
-    Future<void> Function(FileInfo file)? onDownload,
+    void Function(FileInfo file)? onDownload,
     Future<void> Function(FileInfo file)? onRename,
   }) async {
     await showMenu<_MenuAction>(
@@ -94,7 +94,7 @@ final class FileContextMenu {
     _MenuAction action,
     FileInfo file,
     String currentPath, {
-    Future<void> Function(FileInfo file)? onDownload,
+    void Function(FileInfo file)? onDownload,
     Future<void> Function(FileInfo file)? onRename,
   }) {
     switch (action) {

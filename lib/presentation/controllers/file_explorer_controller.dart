@@ -1,5 +1,3 @@
-import 'dart:async';
-import 'dart:js_interop';
 import 'package:jezail_ui/models/files/file_info.dart';
 import 'package:flutter/foundation.dart';
 import 'package:web/web.dart' as web;
@@ -28,7 +26,7 @@ final class FileExplorerController extends ValueNotifier<FileExplorerViewState> 
 
     try {
       final files = await _repository.listDirectory(path: path);
-      final sortedFiles = _sortFiles(files, value.sortField, value.sortAscending);
+      final sortedFiles = FileExplorerViewState.sortFiles(files, value.sortField, value.sortAscending);
       
       value = value.copyWith(
         filesResult: Success(sortedFiles),
@@ -99,7 +97,6 @@ final class FileExplorerController extends ValueNotifier<FileExplorerViewState> 
     value = value.selectAll();
   }
 
-
   void setSortField(FileSortField field) {
     value = value.setSortField(field);
   }
@@ -114,7 +111,6 @@ final class FileExplorerController extends ValueNotifier<FileExplorerViewState> 
       return Error('Failed to create directory: ${e.toString()}', e);
     }
   }
-
 
   Future<FileOperationResult<void>> deleteSelectedFiles() async {
     try {
@@ -141,51 +137,23 @@ final class FileExplorerController extends ValueNotifier<FileExplorerViewState> 
     }
   }
 
-  Future<FileOperationResult<String>> downloadFiles(List<FileInfo> filesToDownload) async {
+  FileOperationResult<String> downloadFiles(List<FileInfo> filesToDownload) {
     try {
       final paths = filesToDownload.map((file) => value.getChildPath(file.displayName)).toList();
-      final result = await _repository.download(paths);
-      
-      if (kIsWeb) {
-        final mimeType = result.filename.endsWith('.zip') 
-            ? 'application/zip'
-            : 'application/octet-stream';
-        
-        final blob = web.Blob([result.data.toJS].toJS, web.BlobPropertyBag(type: mimeType));
-        final url = web.URL.createObjectURL(blob);
-        
-        final anchor = web.HTMLAnchorElement()
-          ..href = url
-          ..download = result.filename;
-        anchor.click();
-        
-        web.URL.revokeObjectURL(url);
-      }
-      
-      return Success(result.filename);
+      final url = _repository.getDownloadUrl(paths);
+
+      final anchor = web.HTMLAnchorElement()
+        ..href = url
+        ..download = '';
+      anchor.click();
+
+      final name = filesToDownload.length == 1
+          ? filesToDownload.first.displayName
+          : '${filesToDownload.length} files';
+      return Success(name);
     } on Exception catch (e) {
       return Error('Failed to download files: ${e.toString()}', e);
     }
   }
 
-  List<FileInfo> _sortFiles(List<FileInfo> files, FileSortField field, bool ascending) {
-    final sorted = List<FileInfo>.from(files);
-    
-    sorted.sort((a, b) {
-      if (a.isDirectory && !b.isDirectory) return -1;
-      if (!a.isDirectory && b.isDirectory) return 1;
-      
-      final comparison = switch (field) {
-        FileSortField.name => a.displayName.toLowerCase().compareTo(b.displayName.toLowerCase()),
-        FileSortField.size => a.size.compareTo(b.size),
-        FileSortField.modified => a.lastModified.compareTo(b.lastModified),
-        FileSortField.type => a.type.name.compareTo(b.type.name),
-        FileSortField.permissions => a.permissions.compareTo(b.permissions),
-      };
-      
-      return ascending ? comparison : -comparison;
-    });
-    
-    return sorted;
-  }
 }

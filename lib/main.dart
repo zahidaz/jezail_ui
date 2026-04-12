@@ -2,14 +2,11 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:jezail_ui/app_config.dart';
-import 'package:jezail_ui/models/tab_info.dart';
-import 'package:logger/logger.dart';
-import 'package:go_router/go_router.dart';
 import 'package:jezail_ui/services/api_service.dart';
-import 'package:jezail_ui/services/device_service.dart';
+import 'package:jezail_ui/services/service_registry.dart';
 import 'package:jezail_ui/core/log.dart';
-import 'package:jezail_ui/presentation/widgets/header.dart';
-import 'package:jezail_ui/presentation/widgets/app_sidebar.dart';
+import 'package:jezail_ui/presentation/router.dart';
+import 'package:logger/logger.dart';
 
 void main() {
   Log.configure(
@@ -25,166 +22,72 @@ void main() {
     ),
   );
 
+  WidgetsFlutterBinding.ensureInitialized();
+  BrowserContextMenu.disableContextMenu();
   runApp(const JezailApp());
 }
 
-class JezailApp extends StatelessWidget {
+class JezailApp extends StatefulWidget {
   const JezailApp({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    BrowserContextMenu.disableContextMenu();
-
-    return MaterialApp.router(
-      title: AppConfig.appName,
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
-        useMaterial3: true,
-      ),
-      routerConfig: _createRouter(),
-      debugShowCheckedModeBanner: false,
-    );
-  }
+  State<JezailApp> createState() => _JezailAppState();
 }
 
-class HomePage extends StatefulWidget {
-  final Widget child;
-
-  const HomePage({super.key, required this.child});
-
-  @override
-  State<HomePage> createState() => _HomePageState();
-}
-
-class _HomePageState extends State<HomePage> {
-  bool sidebarCollapsed = false;
-  late final ApiService apiService;
-
-  @override
-  void initState() {
-    super.initState();
-    apiService = ApiService('${AppConfig.baseUrl}/api');
-  }
-
-  void _onTabSelected(int index) {
-    context.go(tabsConfig[index].path);
-  }
-
-  void _toggleSidebar() {
-    setState(() {
-      sidebarCollapsed = !sidebarCollapsed;
-    });
-  }
-
-  int get _currentTabIndex {
-    final location = GoRouterState.of(context).fullPath ?? '';
-    final index = tabsConfig.indexWhere((tab) => location.startsWith(tab.path));
-    return index == -1 ? 0 : index;
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      body: Column(
-        children: [
-          AppHeader(
-            deviceService: DeviceService(apiService),
-            onToggleSidebar: _toggleSidebar,
-          ),
-          Expanded(
-            child: Row(
-              children: [
-                AppSidebar(
-                  collapsed: sidebarCollapsed,
-                  selectedTab: _currentTabIndex,
-                  tabs: tabsConfig.map((tab) => tab.title).toList(),
-                  tabIcons: tabsConfig.map((tab) => tab.icon).toList(),
-                  onTabSelected: _onTabSelected,
-                ),
-                Expanded(
-                  child: Container(
-                    color: Theme.of(context).colorScheme.surface,
-                    child: TabContainer(
-                      currentTabIndex: _currentTabIndex,
-                      apiService: apiService,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class TabContainer extends StatefulWidget {
-  final int currentTabIndex;
-  final ApiService apiService;
-
-  const TabContainer({
+class ThemeModeNotifier extends InheritedNotifier<ValueNotifier<ThemeMode>> {
+  const ThemeModeNotifier({
     super.key,
-    required this.apiService,
-    required this.currentTabIndex,
-  });
+    required ValueNotifier<ThemeMode> notifier,
+    required super.child,
+  }) : super(notifier: notifier);
 
-  @override
-  State<TabContainer> createState() => _TabContainerState();
+  static ValueNotifier<ThemeMode> of(BuildContext context) {
+    return context.dependOnInheritedWidgetOfExactType<ThemeModeNotifier>()!.notifier!;
+  }
 }
 
-class _TabContainerState extends State<TabContainer> {
-  late final List<Widget> _tabWidgets;
+class _JezailAppState extends State<JezailApp> {
+  late final ServiceRegistry _services;
+  late final _router = createRouter(_services);
+  final _themeMode = ValueNotifier(ThemeMode.system);
 
   @override
   void initState() {
     super.initState();
-    _tabWidgets = tabsConfig
-        .map((tab) => tab.builder(widget.apiService))
-        .toList();
+    final api = ApiService('${AppConfig.baseUrl}/api');
+    _services = ServiceRegistry(api);
+  }
+
+  @override
+  void dispose() {
+    _themeMode.dispose();
+    super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    return IndexedStack(index: widget.currentTabIndex, children: _tabWidgets);
-  }
-}
-
-GoRouter _createRouter() {
-  return GoRouter(
-    routes: [
-      GoRoute(path: '/', redirect: (context, state) => tabsConfig.first.path),
-      ShellRoute(
-        builder: (context, state, child) => HomePage(child: child),
-        routes: tabsConfig.map((tab) {
-          if (tab.hasSubroutes) {
-            return GoRoute(
-              path: tab.path,
-              pageBuilder: (context, state) => NoTransitionPage(
-                key: ValueKey(tab.path),
-                child: const SizedBox.shrink(),
-              ),
-              routes: [
-                GoRoute(
-                  path: ':subpath(.*)',
-                  pageBuilder: (context, state) => NoTransitionPage(
-                    key: ValueKey('${tab.path}/sub'),
-                    child: const SizedBox.shrink(),
-                  ),
-                ),
-              ],
-            );
-          } else {
-            return GoRoute(
-              path: tab.path,
-              pageBuilder: (context, state) => NoTransitionPage(
-                key: ValueKey(tab.path),
-                child: const SizedBox.shrink(),
-              ),
-            );
-          }
-        }).toList(),
+    return ThemeModeNotifier(
+      notifier: _themeMode,
+      child: ValueListenableBuilder<ThemeMode>(
+        valueListenable: _themeMode,
+        builder: (context, mode, _) => MaterialApp.router(
+          title: AppConfig.appName,
+          themeMode: mode,
+          theme: ThemeData(
+            colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
+            useMaterial3: true,
+          ),
+          darkTheme: ThemeData(
+            colorScheme: ColorScheme.fromSeed(
+              seedColor: Colors.deepPurple,
+              brightness: Brightness.dark,
+            ),
+            useMaterial3: true,
+          ),
+          routerConfig: _router,
+          debugShowCheckedModeBanner: false,
+        ),
       ),
-    ],
-  );
+    );
+  }
 }

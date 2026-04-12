@@ -18,7 +18,5 @@ class LogsRepository {
     return List<String>.from(result['data'] ?? []);
   }
 
-  Future<void> clearLogs() async {
-    await _deviceService.clearLogs();
-  }
+  Future<void> clearLogs() => _deviceService.clearLogs();
 }

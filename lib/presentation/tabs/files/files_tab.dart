@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:jezail_ui/repositories/files_repository.dart';
+import 'package:jezail_ui/presentation/controllers/file_explorer_controller.dart';
 import 'package:jezail_ui/presentation/tabs/files/file_explorer.dart';
 
 class FilesTab extends StatefulWidget {
@@ -12,27 +13,30 @@ class FilesTab extends StatefulWidget {
 }
 
 class FilesTabState extends State<FilesTab> {
-  final GlobalKey<State<FileExplorer>> _explorerKey = GlobalKey<State<FileExplorer>>();
+  late final FileExplorerController _controller = FileExplorerController(widget.repository);
 
   void navigateToPath(String path) {
-    final state = _explorerKey.currentState;
-    if (state != null) {
-      (state as dynamic).navigateToPath(path);
-    }
+    _controller.navigateToPath(path);
   }
 
   void _onPathChanged(String path) {
     if (path == '/') {
       context.go('/files');
     } else {
-      context.go('/files?path=$path');
+      context.go('/files?path=${Uri.encodeComponent(path)}');
     }
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     return FileExplorer(
-      key: _explorerKey,
+      controller: _controller,
       repository: widget.repository,
       onPathChanged: _onPathChanged,
     );

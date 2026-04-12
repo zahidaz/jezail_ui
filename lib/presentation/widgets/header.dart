@@ -1,31 +1,13 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'package:jezail_ui/app_config.dart';
 import 'package:jezail_ui/services/device_service.dart';
 import 'package:jezail_ui/core/extensions/snackbar_extensions.dart';
 import 'package:jezail_ui/core/log.dart';
 import 'package:jezail_ui/core/enums/battery_level.dart';
 import 'package:jezail_ui/models/device/device_info.dart';
-
-class AppHeader extends StatelessWidget {
-  final DeviceService deviceService;
-  final VoidCallback? onToggleSidebar;
-
-  const AppHeader({
-    super.key,
-    required this.deviceService,
-    this.onToggleSidebar,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Header(
-      deviceService: deviceService,
-      onToggleSidebar: onToggleSidebar,
-    );
-  }
-}
-
+import 'package:jezail_ui/main.dart';
 
 class Header extends StatefulWidget {
   const Header({super.key, required this.deviceService, this.onToggleSidebar});
@@ -118,7 +100,6 @@ class _HeaderState extends State<Header> with TickerProviderStateMixin {
         );
       }
     } catch (e) {
-      // Revert optimistic update on error
       await _loadSelinuxStatus();
       if (mounted) context.showErrorSnackBar('Failed to toggle SELinux: $e');
       Log.error('Failed to toggle SELinux', e);
@@ -153,7 +134,7 @@ class _HeaderState extends State<Header> with TickerProviderStateMixin {
                 return Row(
                   children: [
                     IconButton(
-                      icon: const Icon(Icons.menu, color: Colors.white),
+                      icon: Icon(Icons.menu, color: Theme.of(context).colorScheme.onPrimary),
                       onPressed: widget.onToggleSidebar ?? () {},
                     ),
                     Padding(
@@ -161,7 +142,7 @@ class _HeaderState extends State<Header> with TickerProviderStateMixin {
                       child: Text(
                         AppConfig.appName,
                         style: TextStyle(
-                          color: Colors.white,
+                          color: theme.colorScheme.onPrimary,
                           fontSize: isCompact ? 16 : 18,
                           fontWeight: FontWeight.bold,
                           letterSpacing: 1.2,
@@ -170,6 +151,8 @@ class _HeaderState extends State<Header> with TickerProviderStateMixin {
                     ),
                     if (!isCompact) _badge(name),
                     const Spacer(),
+                    _themeToggle(),
+                    const SizedBox(width: 8),
                     _selinuxWidget(),
                     const SizedBox(width: 8),
                     _batteryWidget(battery, charging),
@@ -178,7 +161,7 @@ class _HeaderState extends State<Header> with TickerProviderStateMixin {
                       IconButton(
                         icon: Icon(
                           _controller.isCompleted ? Icons.expand_less : Icons.expand_more,
-                          color: Colors.white,
+                          color: theme.colorScheme.onPrimary,
                         ),
                         onPressed: () => _controller.isCompleted 
                           ? _controller.reverse() 
@@ -205,10 +188,6 @@ class _HeaderState extends State<Header> with TickerProviderStateMixin {
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       _badge(name),
-                      const SizedBox(width: 8),
-                      _selinuxWidget(),
-                      const SizedBox(width: 8),
-                      _batteryWidget(battery, charging),
                     ],
                   ),
                   const SizedBox(height: 8),
@@ -227,29 +206,33 @@ class _HeaderState extends State<Header> with TickerProviderStateMixin {
     );
   }
 
-  Widget _badge(String text) => Container(
-    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-    decoration: BoxDecoration(
-      color: Colors.white.withValues(alpha: 0.2),
-      borderRadius: BorderRadius.circular(4),
-    ),
-    child: Text(
-      text,
-      style: const TextStyle(
-        color: Colors.white,
-        fontSize: 12,
-        fontWeight: FontWeight.w500,
+  Widget _badge(String text) {
+    final onPrimary = Theme.of(context).colorScheme.onPrimary;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: onPrimary.withValues(alpha: 0.2),
+        borderRadius: BorderRadius.circular(4),
       ),
-    ),
-  );
+      child: Text(
+        text,
+        style: TextStyle(
+          color: onPrimary,
+          fontSize: 12,
+          fontWeight: FontWeight.w500,
+        ),
+      ),
+    );
+  }
 
   Widget _batteryWidget(int level, bool charging) {
     final batteryLevel = BatteryLevelExtension.fromPercent(level);
-    
+    final onPrimary = Theme.of(context).colorScheme.onPrimary;
+
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.1),
+        color: onPrimary.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(4),
       ),
       child: Row(
@@ -263,8 +246,8 @@ class _HeaderState extends State<Header> with TickerProviderStateMixin {
           const SizedBox(width: 2),
           Text(
             '$level%',
-            style: const TextStyle(
-              color: Colors.white,
+            style: TextStyle(
+              color: onPrimary,
               fontSize: 10,
               fontWeight: FontWeight.w500,
             ),
@@ -277,9 +260,10 @@ class _HeaderState extends State<Header> with TickerProviderStateMixin {
   Widget _selinuxWidget() {
     final isEnforcing = _selinuxStatus?.toLowerCase().contains('enforcing') ?? false;
     final canToggle = _selinuxStatus != null && !_selinuxLoading;
-    
+    final onPrimary = Theme.of(context).colorScheme.onPrimary;
+
     return Tooltip(
-      message: canToggle 
+      message: canToggle
         ? 'Click to toggle SELinux (${isEnforcing ? 'disable' : 'enable'})'
         : 'SELinux status',
       child: MouseRegion(
@@ -289,20 +273,20 @@ class _HeaderState extends State<Header> with TickerProviderStateMixin {
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
             decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: canToggle ? 0.15 : 0.1),
+              color: onPrimary.withValues(alpha: canToggle ? 0.15 : 0.1),
               borderRadius: BorderRadius.circular(4),
-              border: canToggle ? Border.all(color: Colors.white.withValues(alpha: 0.3), width: 1) : null,
+              border: canToggle ? Border.all(color: onPrimary.withValues(alpha: 0.3), width: 1) : null,
             ),
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
                 if (_selinuxLoading)
-                  const SizedBox(
+                  SizedBox(
                     width: 12,
                     height: 12,
                     child: CircularProgressIndicator(
                       strokeWidth: 1.5,
-                      color: Colors.white,
+                      color: onPrimary,
                     ),
                   )
                 else
@@ -313,11 +297,11 @@ class _HeaderState extends State<Header> with TickerProviderStateMixin {
                   ),
                 const SizedBox(width: 2),
                 Text(
-                  _selinuxStatus == null 
-                    ? 'Loading...' 
+                  _selinuxStatus == null
+                    ? 'Loading...'
                     : (isEnforcing ? 'Enforcing' : 'Permissive'),
-                  style: const TextStyle(
-                    color: Colors.white,
+                  style: TextStyle(
+                    color: onPrimary,
                     fontSize: 10,
                     fontWeight: FontWeight.w500,
                   ),
@@ -327,6 +311,25 @@ class _HeaderState extends State<Header> with TickerProviderStateMixin {
           ),
         ),
       ),
+    );
+  }
+
+  Widget _themeToggle() {
+    final themeNotifier = ThemeModeNotifier.of(context);
+    final onPrimary = Theme.of(context).colorScheme.onPrimary;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    return IconButton(
+      icon: Icon(
+        isDark ? Icons.light_mode : Icons.dark_mode,
+        color: onPrimary,
+        size: 18,
+      ),
+      onPressed: () {
+        themeNotifier.value = isDark ? ThemeMode.light : ThemeMode.dark;
+      },
+      tooltip: isDark ? 'Switch to light mode' : 'Switch to dark mode',
+      constraints: const BoxConstraints.tightFor(width: 40, height: 40),
     );
   }
 
@@ -341,45 +344,68 @@ class _HeaderState extends State<Header> with TickerProviderStateMixin {
       _btn(Icons.volume_down, widget.deviceService.pressVolumeDown, 'Volume Down'),
       _btn(Icons.volume_off, widget.deviceService.muteVolume, 'Mute'),
     ]),
-    _single(Icons.content_paste, _showClipboardDialog, 'Clipboard Manager'),
-    _single(Icons.lock, widget.deviceService.pressPower, 'Screen Lock'),
-    _single(Icons.screenshot, widget.deviceService.downloadScreenshot, 'Screenshot'),
+    _singleAsync(Icons.content_paste, _showClipboardDialog, 'Clipboard Manager'),
+    _singleAsync(Icons.lock, widget.deviceService.pressPower, 'Screen Lock'),
+    _singleSync(Icons.screenshot, widget.deviceService.downloadScreenshot, 'Screenshot'),
+    _singleSync(Icons.screen_share, _openMirror, 'Screen Mirror'),
   ];
 
-  Widget _group(List<Widget> children) => Container(
-    margin: const EdgeInsets.symmetric(horizontal: 8),
-    decoration: BoxDecoration(
-      color: Colors.white.withValues(alpha: 0.1),
-      borderRadius: BorderRadius.circular(4),
-    ),
-    child: Row(mainAxisSize: MainAxisSize.min, children: children),
-  );
+  Widget _group(List<Widget> children) {
+    final onPrimary = Theme.of(context).colorScheme.onPrimary;
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 8),
+      decoration: BoxDecoration(
+        color: onPrimary.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(4),
+      ),
+      child: Row(mainAxisSize: MainAxisSize.min, children: children),
+    );
+  }
 
-  Widget _btn(IconData icon, Future<void> Function() action, String tooltip) =>
-    IconButton(
-      icon: Icon(icon, color: Colors.white, size: 18),
+  Widget _btn(IconData icon, Future<void> Function() action, String tooltip) {
+    final onPrimary = Theme.of(context).colorScheme.onPrimary;
+    return IconButton(
+      icon: Icon(icon, color: onPrimary, size: 18),
       onPressed: () => context.runWithFeedback(
         action: action,
         successMessage: '',
-        errorMessage: '',
+        errorMessage: '$tooltip failed',
       ),
       tooltip: tooltip,
-      constraints: const BoxConstraints.tightFor(width: 32, height: 32),
+      constraints: const BoxConstraints.tightFor(width: 40, height: 40),
     );
+  }
 
-  Widget _single(IconData icon, dynamic action, String tooltip) =>
-    IconButton(
-      icon: Icon(icon, color: Colors.white, size: 20),
-      onPressed: action is Future<void> Function()
-        ? () => context.runWithFeedback(
-            action: action,
-            successMessage: '',
-            errorMessage: '',
-          )
-        : action,
+  Widget _singleAsync(IconData icon, Future<void> Function() action, String tooltip) {
+    final onPrimary = Theme.of(context).colorScheme.onPrimary;
+    return IconButton(
+      icon: Icon(icon, color: onPrimary, size: 20),
+      onPressed: () => context.runWithFeedback(
+        action: action,
+        successMessage: '',
+        errorMessage: '$tooltip failed',
+      ),
       tooltip: tooltip,
-      constraints: const BoxConstraints.tightFor(width: 36, height: 36),
+      constraints: const BoxConstraints.tightFor(width: 44, height: 44),
     );
+  }
+
+  Widget _singleSync(IconData icon, VoidCallback action, String tooltip) {
+    final onPrimary = Theme.of(context).colorScheme.onPrimary;
+    return IconButton(
+      icon: Icon(icon, color: onPrimary, size: 20),
+      onPressed: action,
+      tooltip: tooltip,
+      constraints: const BoxConstraints.tightFor(width: 44, height: 44),
+    );
+  }
+
+  void _openMirror() {
+    launchUrl(
+      Uri.parse('${AppConfig.baseUrl}/mirror'),
+      mode: LaunchMode.externalApplication,
+    );
+  }
 
   Future<void> _showClipboardDialog() async {
     if (!mounted) return;

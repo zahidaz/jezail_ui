@@ -32,14 +32,13 @@ class FilesService {
       _api.post('/files/mkdir?path=${Uri.encodeComponent(path)}');
 
   Future<dynamic> changePermissions(String path, String permissions) =>
-      _api.post('/files/chmod?path=${Uri.encodeComponent(path)}&permissions=$permissions');
+      _api.post('/files/chmod?path=${Uri.encodeComponent(path)}&permissions=${Uri.encodeComponent(permissions)}');
 
   Future<dynamic> changeOwner(String path, String owner) =>
-      _api.post('/files/chown?path=${Uri.encodeComponent(path)}&owner=$owner');
-
+      _api.post('/files/chown?path=${Uri.encodeComponent(path)}&owner=${Uri.encodeComponent(owner)}');
 
   Future<dynamic> changeGroup(String path, String group) =>
-      _api.post('/files/chgrp?path=${Uri.encodeComponent(path)}&group=$group');
+      _api.post('/files/chgrp?path=${Uri.encodeComponent(path)}&group=${Uri.encodeComponent(group)}');
 
   Future<dynamic> deleteFile(String path) =>
       _api.delete('/files?path=${Uri.encodeComponent(path)}');
@@ -49,8 +48,10 @@ class FilesService {
     
     var request = http.MultipartRequest('POST', uri);
     
-    if (_api.defaultHeaders.isNotEmpty) {
-      request.headers.addAll(_api.defaultHeaders);
+    for (final entry in _api.defaultHeaders.entries) {
+      if (entry.key.toLowerCase() != 'content-type') {
+        request.headers[entry.key] = entry.value;
+      }
     }
     
 
@@ -62,29 +63,14 @@ class FilesService {
       ),
     );
 
-    final streamedResponse = await request.send();
+    final streamedResponse = await request.send().timeout(const Duration(minutes: 5));
     final response = await http.Response.fromStream(streamedResponse);
     
     return _api.handleResponse(response);
   }
 
-  Future<({Uint8List data, String filename})> download(List<String> paths) async {
+  String getDownloadUrl(List<String> paths) {
     final pathsQuery = paths.map((path) => 'paths=${Uri.encodeComponent(path)}').join('&');
-    final response = await _api.getRaw('/files/download?$pathsQuery');
-    
-    String filename = 'downloaded_${DateTime.now().millisecondsSinceEpoch}';
-    
-    final contentDisposition = response.headers['content-disposition'];
-    if (contentDisposition != null && contentDisposition.contains('filename=')) {
-      final parts = contentDisposition.split('filename=')[1].split(';')[0].trim();
-      if (parts.startsWith("'") || parts.startsWith('"')) {
-        filename = parts.substring(1, parts.endsWith(parts[0]) ? parts.length - 1 : parts.length);
-      } else {
-        filename = parts;
-      }
-      if (filename.isEmpty) filename = 'downloaded_${DateTime.now().millisecondsSinceEpoch}';
-    }
-    
-    return (data: response.bodyBytes, filename: filename);
+    return _api.buildUrl('/files/download?$pathsQuery');
   }
 }

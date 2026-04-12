@@ -1,7 +1,10 @@
+import 'dart:js_interop';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'dart:async';
+import 'dart:convert';
 
+import 'package:web/web.dart' as web;
 import 'package:jezail_ui/core/enums/device_enums.dart';
 import 'package:jezail_ui/repositories/logs_repository.dart';
 import 'package:jezail_ui/core/extensions/snackbar_extensions.dart';
@@ -48,7 +51,7 @@ class _LogsTabState extends State<LogsTab> with SingleTickerProviderStateMixin {
     setState(() => loading = true);
     anim.repeat();
     try {
-      allLogs = await widget.repository.getLogs(type, lines: logLimit, filter: filter.isEmpty ? null : filter);
+      allLogs = await widget.repository.getLogs(type, lines: logLimit);
     } catch (e) {
       if (mounted) context.showErrorSnackBar('Failed to load logs');
     } finally {
@@ -66,8 +69,28 @@ class _LogsTabState extends State<LogsTab> with SingleTickerProviderStateMixin {
 
   void copy(String log) {
     Clipboard.setData(ClipboardData(text: log));
-    HapticFeedback.lightImpact();
     context.showSuccessSnackBar('Copied');
+  }
+
+  void exportLogs() {
+    if (logs.isEmpty) {
+      context.showErrorSnackBar('No logs to export');
+      return;
+    }
+    final content = logs.join('\n');
+    final bytes = utf8.encode(content);
+    final blob = web.Blob(
+      [Uint8List.fromList(bytes).toJS].toJS,
+      web.BlobPropertyBag(type: 'text/plain'),
+    );
+    final url = web.URL.createObjectURL(blob);
+    final timestamp = DateTime.now().millisecondsSinceEpoch;
+    final anchor = web.HTMLAnchorElement()
+      ..href = url
+      ..download = '${type.name}_logs_$timestamp.txt';
+    anchor.click();
+    web.URL.revokeObjectURL(url);
+    context.showSuccessSnackBar('Exported ${logs.length} log entries');
   }
 
   @override
@@ -115,33 +138,38 @@ class _LogsTabState extends State<LogsTab> with SingleTickerProviderStateMixin {
               ),
             ),
             const SizedBox(width: 8),
-            Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: cs.surface,
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: cs.outline.withAlpha(25)),
-              ),
-              child: GestureDetector(
-                onTap: load,
-                child: loading
-                    ? SizedBox(
-                        width: 18,
-                        height: 18,
-                        child: RotationTransition(
-                          turns: anim,
-                          child: Icon(
-                            Icons.refresh,
-                            color: cs.primary,
-                            size: 18,
-                          ),
-                        ),
-                      )
-                    : Icon(
-                        Icons.refresh,
-                        color: cs.primary,
-                        size: 18,
+            IconButton(
+              onPressed: load,
+              tooltip: 'Refresh',
+              icon: loading
+                  ? SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: RotationTransition(
+                        turns: anim,
+                        child: Icon(Icons.refresh, color: cs.primary, size: 18),
                       ),
+                    )
+                  : Icon(Icons.refresh, color: cs.primary, size: 18),
+              style: IconButton.styleFrom(
+                backgroundColor: cs.surface,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  side: BorderSide(color: cs.outline.withAlpha(25)),
+                ),
+              ),
+            ),
+            const SizedBox(width: 8),
+            IconButton(
+              onPressed: logs.isNotEmpty ? exportLogs : null,
+              icon: Icon(Icons.download, color: logs.isNotEmpty ? cs.primary : cs.outline, size: 18),
+              tooltip: 'Export logs',
+              style: IconButton.styleFrom(
+                backgroundColor: cs.surface,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  side: BorderSide(color: cs.outline.withAlpha(25)),
+                ),
               ),
             ),
             const SizedBox(width: 8),

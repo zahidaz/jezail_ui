@@ -13,9 +13,9 @@ class FridaRepository {
       final result = await _fridaService.getStatus();
       final data = result['data'];
       return FridaStatus(
-        isRunning: data['isRunning'] as bool,
-        port: data['port'],
-        version: data['version'],
+        isRunning: data['isRunning'] as bool? ?? false,
+        port: data['port']?.toString() ?? '',
+        version: data['version']?.toString() ?? 'unknown',
       );
     } catch (e) {
       throw ToolOperationException('Failed to get Frida status: $e');
@@ -27,10 +27,10 @@ class FridaRepository {
       final result = await _fridaService.getInfo();
       final data = result['data'];
       return FridaInfo(
-        currentVersion: data['currentVersion'],
-        latestVersion: data['latestVersion'],
-        needsUpdate: data['needsUpdate'] as bool,
-        installPath: data['installPath'],
+        currentVersion: data['currentVersion']?.toString() ?? 'unknown',
+        latestVersion: data['latestVersion']?.toString() ?? 'unknown',
+        needsUpdate: data['needsUpdate'] as bool? ?? false,
+        installPath: data['installPath']?.toString() ?? '',
       );
     } catch (e) {
       throw ToolOperationException('Failed to get Frida info: $e');
@@ -66,6 +66,23 @@ class FridaRepository {
       await _fridaService.update();
     } catch (e) {
       throw ToolOperationException('Failed to update Frida: $e');
+    }
+  }
+
+  Future<Map<String, dynamic>> getConfig() async {
+    try {
+      final result = await _fridaService.getConfig();
+      return Map<String, dynamic>.from(result['data'] ?? {});
+    } catch (e) {
+      throw ToolOperationException('Failed to get Frida config: $e');
+    }
+  }
+
+  Future<void> updateConfig(Map<String, dynamic> config) async {
+    try {
+      await _fridaService.updateConfig(config);
+    } catch (e) {
+      throw ToolOperationException('Failed to update Frida config: $e');
     }
   }
 }

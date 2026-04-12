@@ -1,3 +1,5 @@
+import 'dart:convert';
+import 'dart:typed_data';
 
 class PackageInfo {
   final String packageName;
@@ -21,6 +23,20 @@ class PackageInfo {
     this.version,
     this.isDebuggable,
   });
+
+  late final Uint8List? iconBytes = _decodeIcon();
+
+  Uint8List? _decodeIcon() {
+    if (iconBase64.isEmpty) return null;
+    try {
+      final data = iconBase64.contains(',')
+          ? iconBase64.split(',').last
+          : iconBase64;
+      return base64Decode(data);
+    } catch (_) {
+      return null;
+    }
+  }
 
   PackageInfo copyWith({
     String? packageName,

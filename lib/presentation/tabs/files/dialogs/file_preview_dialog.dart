@@ -2,8 +2,7 @@ import 'package:jezail_ui/models/files/file_info.dart';
 import 'package:flutter/material.dart';
 import 'package:jezail_ui/repositories/files_repository.dart';
 
-
-class FilePreviewDialog extends StatelessWidget {
+class FilePreviewDialog extends StatefulWidget {
   const FilePreviewDialog({
     super.key,
     required this.file,
@@ -22,6 +21,20 @@ class FilePreviewDialog extends StatelessWidget {
   final Future<void> Function() onChanged;
 
   @override
+  State<FilePreviewDialog> createState() => _FilePreviewDialogState();
+}
+
+class _FilePreviewDialogState extends State<FilePreviewDialog> {
+  late final Future<String> _contentFuture = _loadFileContent();
+
+  Future<String> _loadFileContent() async {
+    final filePath = widget.currentPath == '/'
+        ? '/${widget.file.displayName}'
+        : '${widget.currentPath}/${widget.file.displayName}';
+    return await widget.repository.readFile(filePath);
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Dialog(
       child: SizedBox(
@@ -30,7 +43,7 @@ class FilePreviewDialog extends StatelessWidget {
         child: Column(
           children: [
             AppBar(
-              title: Text(file.displayName),
+              title: Text(widget.file.displayName),
               automaticallyImplyLeading: false,
               actions: [
                 IconButton(
@@ -40,7 +53,7 @@ class FilePreviewDialog extends StatelessWidget {
                 ),
                 IconButton(
                   icon: const Icon(Icons.download),
-                  onPressed: onDownload,
+                  onPressed: widget.onDownload,
                 ),
                 IconButton(
                   icon: const Icon(Icons.close),
@@ -64,14 +77,14 @@ class FilePreviewDialog extends StatelessWidget {
 
   Widget _buildFileContent(BuildContext context) {
     return FutureBuilder<String>(
-      future: _loadFileContent(),
+      future: _contentFuture,
       builder: (context, snapshot) {
         final theme = Theme.of(context);
-        
+
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Center(child: CircularProgressIndicator());
         }
-        
+
         if (snapshot.hasError) {
           return Center(
             child: Column(
@@ -99,10 +112,10 @@ class FilePreviewDialog extends StatelessWidget {
             ),
           );
         }
-        
+
         final content = snapshot.data ?? '';
-        
-        if (!file.isLikelyTextFile && content.isNotEmpty) {
+
+        if (!widget.file.isLikelyTextFile && content.isNotEmpty) {
           return Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -127,7 +140,7 @@ class FilePreviewDialog extends StatelessWidget {
                     const SizedBox(width: 8),
                     Expanded(
                       child: Text(
-                        'This file (${file.mimeType ?? 'unknown type'}) may contain binary data. Content might appear garbled.',
+                        'This file (${widget.file.mimeType ?? 'unknown type'}) may contain binary data. Content might appear garbled.',
                         style: theme.textTheme.bodySmall?.copyWith(
                           color: theme.colorScheme.onSecondaryContainer,
                         ),
@@ -136,19 +149,17 @@ class FilePreviewDialog extends StatelessWidget {
                   ],
                 ),
               ),
-              Expanded(
-                child: SizedBox(
-                  width: double.infinity,
-                  child: SelectableText(
-                    content,
-                    style: const TextStyle(fontFamily: 'monospace'),
-                  ),
+              SizedBox(
+                width: double.infinity,
+                child: SelectableText(
+                  content,
+                  style: const TextStyle(fontFamily: 'monospace'),
                 ),
               ),
             ],
           );
         }
-        
+
         return SizedBox(
           width: double.infinity,
           child: SelectableText(
@@ -161,9 +172,9 @@ class FilePreviewDialog extends StatelessWidget {
   }
 
   void _handleEditRequest(BuildContext context) {
-    if (file.isLikelyTextFile) {
+    if (widget.file.isLikelyTextFile) {
       Navigator.pop(context);
-      onEdit();
+      widget.onEdit();
     } else {
       _showEditConfirmationDialog(context);
     }
@@ -171,7 +182,7 @@ class FilePreviewDialog extends StatelessWidget {
 
   void _showEditConfirmationDialog(BuildContext context) {
     final theme = Theme.of(context);
-    
+
     showDialog<void>(
       context: context,
       builder: (context) => AlertDialog(
@@ -186,7 +197,7 @@ class FilePreviewDialog extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'This file appears to be a binary file (${file.mimeType ?? 'unknown type'}).',
+              'This file appears to be a binary file (${widget.file.mimeType ?? 'unknown type'}).',
               style: theme.textTheme.bodyMedium,
             ),
             const SizedBox(height: 12),
@@ -224,9 +235,9 @@ class FilePreviewDialog extends StatelessWidget {
           ),
           ElevatedButton(
             onPressed: () {
-              Navigator.pop(context); // Close confirmation dialog
-              Navigator.pop(context); // Close preview dialog
-              onEdit(); // Proceed to edit
+              Navigator.pop(context);
+              Navigator.pop(context);
+              widget.onEdit();
             },
             style: ElevatedButton.styleFrom(
               backgroundColor: theme.colorScheme.secondary,
@@ -237,12 +248,5 @@ class FilePreviewDialog extends StatelessWidget {
         ],
       ),
     );
-  }
-
-  Future<String> _loadFileContent() async {
-    final filePath = currentPath == '/' 
-        ? '/${file.displayName}' 
-        : '$currentPath/${file.displayName}';
-    return await repository.readFile(filePath);
   }
 }
